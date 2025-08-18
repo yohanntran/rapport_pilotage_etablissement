@@ -6,6 +6,10 @@ title: "LANCER"
 library(rmarkdown)
 library(officedown)
 
+etablissement = "CHEB"
+# etablissement = "CHE"
+# etablissement = "CHICAS"
+
 # Récupérer le nom d'utilisateur
 nom_utilisateur <- Sys.getenv("USERNAME")
 cat("Utilisateur actuel :", nom_utilisateur, "\n")
@@ -32,7 +36,8 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "C:/Users/Public/Documents/modele_RDD.docx"),
-  output_file = "Tableaux_pilotage.docx"
+  output_file = "Tableaux_pilotage.docx",
+  params = list(etabb = etablissement) 
 )
 } else {
   cat("Configuration standard pour :", nom_utilisateur, "\n")
@@ -40,7 +45,8 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "modele_RDD.docx"),
-  output_file = "Tableaux_pilotage.docx"
+  output_file = "Tableaux_pilotage.docx",
+  params = list(etabb = etablissement) 
 )
 }
 ```

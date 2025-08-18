@@ -1,82 +1,25 @@
 ---
-title: "Tableau de pilotage"
-subtitle: 'en date du `r format(Sys.time(), "%d/%m/%Y")`'
+title:  "Tableau de pilotage"
+subtitle:  'en date du `r format(Sys.time(), "%d/%m/%Y")`'
+
 output: 
   officedown::rdocx_document:
+      reference_docx:  modele_RDD.docx
       page_margins:
-        gutter: 0
+        gutter:  0
 params:
-  etabb: NULL
-always_allow_html: yes
+  etabb: NULL        
+always_allow_html:  yes
 ---
 
 ```{r echo=F}
+# VERSION 2.0
 
-# installation=0
-# nom_utilisateur <- Sys.getenv("USERNAME")
-# cat("Utilisateur actuel :", nom_utilisateur, "\n")
-# 
-# if (nom_utilisateur == "ytran") {
-# # À exécuter UNE SEULE FOIS
-#   chemin_unc <- "//NETUSERS/Partages/Intra-Service/CHB/dim/Statistiques/APP RAPPORT PILOTAGE ETABLISSEMENT/PROG_RAPPORT_PILOTAGE_ETABLISSEMENT/modele_RDD.docx"
-#   destination <- "C:/Users/Public/Documents/modele_RDD.docx"
-# 
-#   # Créer le dossier si nécessaire
-#   dir.create("C:/Users/Public/Documents", showWarnings = FALSE, recursive = TRUE)
-# 
-#   # Copier le fichier
-#   if (file.copy(chemin_unc, destination, overwrite = TRUE)) {
-#     cat("✓ Modèle installé avec succès à :", destination, "\n")
-#   } else {
-#     stop("Échec de l'installation")
-#   }
-#   modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
-# 
-# }else{
-#   modele_path <- "modele_RDD.docx"
-# }
-# modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
-# options(officedown.reference_docx = "C:/Users/Public/Documents/modele_RDD.docx")
-```
-
-```{r echo=F}
-# library(officedown)
-# 
-# # Récupérer le nom d'utilisateur
-# nom_utilisateur <- Sys.getenv("USERNAME")
-# cat("Utilisateur actuel :", nom_utilisateur, "\n")
-# 
-# # Configuration conditionnelle
-# if (nom_utilisateur == "ytran") {
-#   # === CONFIGURATION POUR YTRAN ===
-#   cat("Configuration spéciale pour ytran\n")
-#   
-#   modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
-#   
-#   if (!file.exists(modele_path)) {
-#     stop("Modèle introuvable. Exécutez d'abord l'installation manuelle.")
-#   }
-#   
-#   options(officedown.reference_docx = modele_path)
-#   cat("✓ Modèle trouvé :", modele_path, "\n")
-#   
-# } else {
-#   # === CONFIGURATION POUR LES AUTRES ===
-#   cat("Configuration standard pour :", nom_utilisateur, "\n")
-#   # Pas de modèle spécial, utilise le défaut officedown
-#   modele_path <- "modele_RDD.docx"
-#   
-#   if (!file.exists(modele_path)) {
-#     stop("Modèle introuvable. Exécutez d'abord l'installation manuelle.")
-#   }
-#   
-#   options(officedown.reference_docx = modele_path)
-# }
 ```
 
 ```{r pressure, echo=FALSE, fig.height=8.4, fig.width=6.5}
-etabb = "CHEB"
-etablissement = etabb
+# etabb = "CHEB"
+etabb = params$etabb
 ################################################################################
 # Importation de la photo visible à la première page de couverture du document #
 ################################################################################
@@ -2851,6 +2794,5 @@ Email[["HTMLBody"]] <- texte_corps
 # Affichage du mail dans Outlook
 Email$Display()
 
-# pwet
 ```
 
