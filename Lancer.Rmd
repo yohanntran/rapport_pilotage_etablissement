@@ -1,5 +1,6 @@
 ---
 title: "LANCER"
+output: null
 ---
 
 ```{r}
@@ -36,7 +37,7 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "C:/Users/Public/Documents/modele_RDD.docx"),
-  output_file = "Tableaux_pilotage.docx",
+  output_file = "../SORTIE/Tableaux_pilotage.docx",
   params = list(etabb = etablissement) 
 )
 } else {
@@ -45,13 +46,10 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "modele_RDD.docx"),
-  output_file = "Tableaux_pilotage.docx",
+  output_file = "../SORTIE/Tableaux_pilotage.docx",
   params = list(etabb = etablissement) 
 )
 }
 ```
 
-```{r}
-
-```
 
