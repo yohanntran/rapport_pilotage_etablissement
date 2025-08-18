@@ -1,0 +1,2856 @@
+---
+title: "Tableau de pilotage"
+subtitle: 'en date du `r format(Sys.time(), "%d/%m/%Y")`'
+output: 
+  officedown::rdocx_document:
+      page_margins:
+        gutter: 0
+params:
+  etabb: NULL
+always_allow_html: yes
+---
+
+```{r echo=F}
+
+# installation=0
+# nom_utilisateur <- Sys.getenv("USERNAME")
+# cat("Utilisateur actuel :", nom_utilisateur, "\n")
+# 
+# if (nom_utilisateur == "ytran") {
+# # À exécuter UNE SEULE FOIS
+#   chemin_unc <- "//NETUSERS/Partages/Intra-Service/CHB/dim/Statistiques/APP RAPPORT PILOTAGE ETABLISSEMENT/PROG_RAPPORT_PILOTAGE_ETABLISSEMENT/modele_RDD.docx"
+#   destination <- "C:/Users/Public/Documents/modele_RDD.docx"
+# 
+#   # Créer le dossier si nécessaire
+#   dir.create("C:/Users/Public/Documents", showWarnings = FALSE, recursive = TRUE)
+# 
+#   # Copier le fichier
+#   if (file.copy(chemin_unc, destination, overwrite = TRUE)) {
+#     cat("✓ Modèle installé avec succès à :", destination, "\n")
+#   } else {
+#     stop("Échec de l'installation")
+#   }
+#   modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
+# 
+# }else{
+#   modele_path <- "modele_RDD.docx"
+# }
+# modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
+# options(officedown.reference_docx = "C:/Users/Public/Documents/modele_RDD.docx")
+```
+
+```{r echo=F}
+# library(officedown)
+# 
+# # Récupérer le nom d'utilisateur
+# nom_utilisateur <- Sys.getenv("USERNAME")
+# cat("Utilisateur actuel :", nom_utilisateur, "\n")
+# 
+# # Configuration conditionnelle
+# if (nom_utilisateur == "ytran") {
+#   # === CONFIGURATION POUR YTRAN ===
+#   cat("Configuration spéciale pour ytran\n")
+#   
+#   modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
+#   
+#   if (!file.exists(modele_path)) {
+#     stop("Modèle introuvable. Exécutez d'abord l'installation manuelle.")
+#   }
+#   
+#   options(officedown.reference_docx = modele_path)
+#   cat("✓ Modèle trouvé :", modele_path, "\n")
+#   
+# } else {
+#   # === CONFIGURATION POUR LES AUTRES ===
+#   cat("Configuration standard pour :", nom_utilisateur, "\n")
+#   # Pas de modèle spécial, utilise le défaut officedown
+#   modele_path <- "modele_RDD.docx"
+#   
+#   if (!file.exists(modele_path)) {
+#     stop("Modèle introuvable. Exécutez d'abord l'installation manuelle.")
+#   }
+#   
+#   options(officedown.reference_docx = modele_path)
+# }
+```
+
+```{r pressure, echo=FALSE, fig.height=8.4, fig.width=6.5}
+etabb = "CHEB"
+etablissement = etabb
+################################################################################
+# Importation de la photo visible à la première page de couverture du document #
+################################################################################
+if(etablissement == "CHICAS"){
+  knitr::include_graphics("Images/chicas.png")
+}else if (etablissement == "CHEB"){
+  knitr::include_graphics("Images/cheb.png")
+}else if (etablissement == "CHE"){
+  knitr::include_graphics("Images/che.png")
+}
+```
+
+
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, results = "asis"}
+###################################
+# Paramétrage de tous les chuncks #
+###################################
+
+# echo: empêche le code, mais pas les résultats, d'apparaître dans le fichier fini.
+# message: empêche les messages générés par le code d'apparaître dans le fichier terminé.
+# warning: empêche les avertissements générés par le code d'apparaître dans le fichier fini.
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, results = "asis")
+```
+
+```{r packages}
+#Manipulation Table
+library("dplyr") # pour manip. les données
+
+# Document Word
+library("flextable") # pour faire des beaux dataframe
+library("officedown") # pour faire des beaux words
+library("officer") # pour faire des beaux words
+library("stringr") # pour faire des manip. chaines de caractères
+library("lubridate")
+library("ggplot2")# pour faire des jolis graphiques
+library("scales")
+library("openxlsx")
+library("htmltools")
+
+#Autres
+library("knitr") # pour knit
+library("kableExtra") # pour sortir des jolies dataframe
+library("DT")# pour sortir des jolies dataframe
+library("datawizard") #convert into numeric
+library("schoolmath") #is decimal (yes/n)
+
+#plusieurs graph meme page
+library("ggpubr")
+
+#email
+library("RDCOMClient")
+```
+
+
+
+```{r fonction_setup}
+
+############
+#Fonctions #
+############
+
+macouleur_entete<-"#0063AF"
+macouleur_ligne<-"#F0EEEE"
+
+library(flextable)
+
+theme_table <- function(x, texte = FALSE, affiche_Nb. = F, colour = F) {
+  # texte : permet de donner un nom à la table si vous le souhaitez
+  # affiche_Nb. : permet de rajouter à la fin du titre de la table le Nb. de lignes de la table. 
+  # Si texte=FALSE alors l'argument affiche_Nb. ne sera pas pris en compte.
+  # pwet
+  # x=dat_list[[1]][[1]]
+  mois_en_cours <- as.numeric(format(Sys.Date(), "%m"))
+  mois_ajuste <- mois_en_cours - 2
+  
+  if(mois_en_cours >10){
+    if(mois_ajuste == 1){
+      mois_ajuste = 11
+    }
+    if(mois_ajuste == 2){
+      mois_ajuste = 12
+    }
+  }
+  if(length(mois_ajuste)==1){
+    mois_ajuste = paste0("0",mois_ajuste)
+  }
+  nouveau_nom_colonne_M1 <- paste("2024M", mois_ajuste, sep="")
+  colnames(x)[colnames(x) == "2024"] <- nouveau_nom_colonne_M1
+  
+  nouveau_nom_colonne_M2 <- paste("2025M", mois_ajuste, sep="")
+  colnames(x)[colnames(x) == "2025"] <- nouveau_nom_colonne_M2
+  nom_colonne_finale = paste0("2025/2024M", mois_ajuste)
+  colnames(x)[colnames(x) == "Différence (%)\n2025-2024"] <- paste0("2025/2024M", mois_ajuste)
+  nb_ligne_tableau = dim(x)[1] # permet de connaitre le nombre de ligne du tableau
+  nb_colonne_tableau = dim(x)[2]
+  colonne_nom = paste0("2025/2024M", mois_ajuste)
+    
+  if(colonne_nom %in% colnames(x)){
+    x <- x %>%
+      mutate(!!colonne_nom := ifelse(!is.na(.data[[colonne_nom]]), paste0(.data[[colonne_nom]], "%"),""))
+  }
+  old_x=x
+  # Définition des couleurs
+  macouleur_entete <- "#0063AF"
+  macouleur_ligne <- "#F0EEEE"
+  
+  if(colour==T){
+     colnames(x)[colnames(x) == colonne_nom] <- "Difference"
+  
+  # Étape 1 : Extraire les valeurs numériques de la colonne
+     valeur_num <- as.numeric(sub("%", "", sub("[+]", "", x$Difference)))
+  }
+# Étape 2 : Assigner les couleurs selon les conditions
+  # couleur <- ifelse(valeur_num > 5, "vert",
+  #               ifelse(valeur_num < -5, "rouge", "noir"))
+  
+  
+
+  if (nb_ligne_tableau > 0) { # si le nombre de ligne du tableau est positif, on crée un flextable
+
+    x = x %>%
+      flextable::flextable() %>% # transforme le dataframe en flextable
+      flextable::color(color = "white", part = "header") %>% # écrit le texte en blanc en en-tête
+      flextable::theme_zebra(odd_body = macouleur_ligne) %>% # applique le thème zebra avec des lignes grises claires
+      flextable::bg(bg = macouleur_entete, part = "header") %>% # couleur de fond sombre pour l'en-tête
+      flextable::font(fontname = "Segoe UI", part = "all") %>% # police Segoe UI pour tout le tableau
+      flextable::fontsize(size = 10, part = "all") %>% # police de taille 10 pour une apparence plus sobre
+      flextable::bold(bold = TRUE, part = "header") %>% # met en gras l'en-tête
+      flextable::border_inner_v(border = fp_border(color = "#bdc3c7", width = 0.5)) %>% # bordures verticales fines et subtiles
+      flextable::border_outer(border = fp_border(color = "#bdc3c7", width = 0.5)) %>% # bordures extérieures fines
+      flextable::align(align = "left", part = "header") %>% # aligne le texte à gauche dans les cellules de l'en-tête
+      flextable::align(align = "left", part = "body") %>% # aligne le texte à gauche dans les cellules du corps du tableau
+      flextable::set_table_properties(layout = "autofit") %>% # ajuste la largeur des colonnes pour les adapter au contenu
+      flextable::padding(padding = 5, part = "all") %>% # ajoute un peu d'espace autour du texte pour un aspect plus aéré
+      flextable::color(color = "#34495e", part = "all") %>%  # texte de couleur grise foncée pour une meilleure lisibilité
+      flextable::color(color = "white", part = "header") %>% 
+      flextable::set_table_properties(width=1,layout="autofit")
+    
+    if(colour==T){
+      # Étape 2 : Assigner les couleurs selon les conditions
+      valeur_couleur <- ifelse(valeur_num > 5, "#28a745",  # Vert
+                    ifelse(valeur_num < -5, "#dc3545",   # Rouge
+                           "black"))     
+  
+      # Appliquer les couleurs à la colonne "Différence"
+       x <- color(x, j = "Difference", color = valeur_couleur)
+      # colnames(x)[colnames(x) == "Difference"] <- colonne_nom
+      x <- set_header_labels(x, Difference = colonne_nom)
+    }
+    # Ajuster la largeur de la dernière colonne
+    if(colonne_nom %in% colnames(old_x)){
+      if(colour == T){
+        # x <- flextable::width(x, j = Difference, width = 4) # Largeur fixée à 4 pouces pour la dernière colonne
+        x <- flextable::align(x, j = "Difference", align = "center", part = "all")
+      }else{
+        # x <- flextable::width(x, j = paste0("2025/2024M", mois_ajuste), width = 4) # Largeur fixée à 4 pouces pour la dernière colonne
+      x <- flextable::align(x, j = paste0("2025/2024M", mois_ajuste), align = "center", part = "all")
+      }
+    }
+    if(nouveau_nom_colonne_M1 %in% colnames(old_x)){
+      x <- flextable::align(x, j = nouveau_nom_colonne_M1, align = "right", part = "all")
+    }
+    if(nouveau_nom_colonne_M1 %in% colnames(old_x)){
+      x <- flextable::align(x, j = nouveau_nom_colonne_M2, align = "right", part = "all")
+    }
+    # if(nb_colonne_tableau == 4){
+    #   x <- flextable::width(x, j = 1:4, width = c(5, 5, 5, 3)) # Ajustez les largeurs selon vos besoins
+    # }
+    # if(nb_colonne_tableau == 5){
+    #   x <- flextable::width(x, j = 1:5, width = c(2, 2, 2, 2, 4)) # Ajustez les largeurs selon vos besoins
+    # }
+    
+    x
+    # Exportation vers Word
+    # flextable::save_as_docx(x, path = "tableau_exporte.docx")
+  }
+}
+
+
+
+
+
+
+# Fonction servant à rajouter un commentaire en italique après une table par exemple
+# Ne pas hésiter à modifier la couleur, la taille, la police, ...
+commentaires <- function(texte,col = "#003399"){ # le commentaire sera en bleu
+  ftext(texte, prop = fp_text(color = col,italic = TRUE))
+}
+
+
+
+# permet d'arrondir toutes les colonnes numériques d'un dataframe si elles sont définies comme étant des numériques
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1)) # vapply, s'applique sur des vecteurs
+    df[,nums] <- round(df[,nums], digits = digits) # fonction arrondir, avec le paramètre digits, nombre de chiffres après la virgule
+  (df)
+}
+
+# permet de mettre en forme le tableau de données à partir de l'élément #
+mise_en_forme_tableau = function(df){
+  # df=my_data_7[[1]]
+  indice = stack(setNames(df$Informations, seq_along(df$Informations)))[2:1]
+  indice = as.integer(indice$ind[which(grepl("#", indice$values))]) + 1
+  vect = data.frame(t(df[indice,]))
+  colnames(vect)="colonne"
+  vect_plus_1 = data.frame(t(df[indice+1,]))
+  colnames(vect_plus_1)="colonne"
+  df = tail(df, dim(df)[1]-indice)
+
+  if(vect_plus_1$colonne[1] == vect$colonne[1]){
+    colnames(df)=c(" ",vect$colonne[-1])
+  }else{
+    colnames(df)=c(vect$colonne)
+  }
+  df = round_df(df, digits=3)
+  if("Différence (%) 2025-2024" %in% colnames(df)){
+    colnames(df)[colnames(df) == "Différence (%) 2025-2024"] = "Différence (%)\n2025-2024"
+    if(colnames(df)[2]  == "2025" & colnames(df)[3] == "2024"){
+      df = df %>% 
+        mutate(`Différence (%)\n2025-2024` = round((`2025`-`2024`)/`2024`,2))
+      df$`Différence (%)\n2025-2024`[is.nan(df$`Différence (%)\n2025-2024`)] = ""
+      df = df %>% 
+        select(` `,`2024`,`2025`,`Différence (%)\n2025-2024` )
+    }
+  }else{
+
+    if("Pôle" %in% colnames(df)){
+      df = df %>% 
+          mutate(`Différence (%)\n2025-2024` = round((`2025`-`2024`)/`2024`*100,2))
+      df = df %>% 
+        relocate(Pôle, `Unité Médicale`,`Nb de passages dans le service`,`2024`,`2025`,`Différence (%)\n2025-2024`) %>% 
+        select(-`Différence (%) 2024-2025`)
+      df$`Différence (%)\n2025-2024`[is.nan(df$`Différence (%)\n2025-2024`)] = ""
+    }else{
+      colnames(df)[colnames(df) == "Différence (%) 2025-2024"] = "Différence (%)\n2025-2024"
+      if(colnames(df)[2]  == "2025" & colnames(df)[3] == "2024"){
+        df = df %>% 
+          mutate(`Différence (%)\n2025-2024` = round((`2025`-`2024`)/`2024`*100,2))
+        df$`Différence (%)\n2025-2024`[is.nan(df$`Différence (%)\n2025-2024`)] = ""
+        df = df %>% 
+          select(` `,`2024`,`2025`,`Différence (%)\n2025-2024` )
+      }
+    }
+    # df = df %>% 
+    #     select(` `,`2024`,`2025`,`Différence (%)\n2025-2024` )
+  }
+  
+  
+  return(df)
+}
+
+mise_en_forme_tableau_exp_10 = function(df){
+  # df=my_data_1[[1]]
+  indice = stack(setNames(df$Informations, seq_along(df$Informations)))[2:1]
+  indice = as.integer(indice$ind[which(grepl("#", indice$values))]) + 1 +1
+  vect = data.frame(t(df[indice,]))
+  colnames(vect)="colonne"
+  vect_plus_1 = data.frame(t(df[indice+1,]))
+  colnames(vect_plus_1)="colonne"
+  df = tail(df, dim(df)[1]-indice)
+
+  if(vect_plus_1$colonne[1] == vect$colonne[1]){
+    colnames(df)=c(" ",vect$colonne[-1])
+  }else{
+    colnames(df)=c(vect$colonne)
+  }
+  df = round_df(df, digits=3)
+  colnames(df)[colnames(df) == "Différence (%) 2025-2024"] = "Différence (%)\n2025-2024"
+  return(df)
+}
+
+# fonction permettant d'afficher le tableau 
+affichage_tableau = function(df, title){
+  df = df %>%
+    theme_table(texte=title, affiche_Nb. = F)%>%
+    line_spacing(space = 1, part = "body")
+  df
+}
+
+f1 <- function(num) {
+        format(num, big.mark = ' ')
+}
+
+mettre_un_plus_df = function(df){
+  # df = dat_list[[1]][[1]]
+    if(sum(grepl("Différence", colnames(df)))>=1){
+      df = df %>% 
+        mutate(`Différence (%)\n2025-2024` = ifelse(substr(`Différence (%)\n2025-2024`,1,1) == "-",`Différence (%)\n2025-2024`,paste0("+",`Différence (%)\n2025-2024`)))
+    }
+    return(df)
+}
+
+around_df = function(df, IP_DMS=F){
+  if(IP_DMS == T){
+    a = df$`2024`[which(df$` ` == "IP DMS (DMS Etablissement / DMS Nationale)³")]
+    b = df$`2025`[which(df$` ` == "IP DMS (DMS Etablissement / DMS Nationale)³")]
+    c = df$`2024`[which(df$` ` == "Durée Moyenne de Séjours² (DMS) PMSI des RUM (Jours)")]
+    d = df$`2025`[which(df$` ` == "Durée Moyenne de Séjours² (DMS) PMSI des RUM (Jours)")]
+    e = df$`2024`[which(df$` ` == "DMS Brute (Jours)")]
+    f = df$`2025`[which(df$` ` == "DMS Brute (Jours)")]
+  }
+  for(var in colnames(df)){
+    df[,var] = coerce_to_numeric(df[,var])
+    if(is.numeric(df[,var])){
+      df[,var] = sapply(df[,var], function(X) 
+        if(!is.na(X)){
+          if(is.decimal(X)){
+            if(X < 1000){
+              round(X,1)
+            }else{
+              f1(round(X,0))
+            }
+          }else{
+            f1(X)
+          }
+        }else{
+          X
+        }
+        
+        )
+    }
+  }
+  if(IP_DMS == T){
+    df$`2024`[which(df$` ` == "IP DMS (DMS Etablissement / DMS Nationale)³")] = ifelse(nchar(as.character(a))==4,paste0(as.character(a),"0"),a)
+    df$`2025`[which(df$` ` == "IP DMS (DMS Etablissement / DMS Nationale)³")] = ifelse(nchar(as.character(b))==4,paste0(as.character(b),"0"),b)
+    df$`2024`[which(df$` ` == "Durée Moyenne de Séjours² (DMS) PMSI des RUM (Jours)")] = ifelse(nchar(as.character(c))==4,paste0(as.character(c),"0"),c)
+    df$`2025`[which(df$` ` == "Durée Moyenne de Séjours² (DMS) PMSI des RUM (Jours)")] = ifelse(nchar(as.character(d))==4,paste0(as.character(d),"0"),d)
+    df$`2024`[which(df$` ` == "DMS Brute (Jours)")] = ifelse(nchar(as.character(e))==4,paste0(as.character(b),"0"),e)
+    df$`2025`[which(df$` ` == "DMS Brute (Jours)")] = ifelse(nchar(as.character(f))==4,paste0(as.character(b),"0"),f)
+  }
+  return(df)
+}
+
+traitement = function(X){
+  X = str_replace(X,".xlsx","")
+  X = str_replace(X,"Pilotage établissement - ","")
+  X = str_replace(X,"Indicateurs principaux","")
+  X = str_replace(X," \\(CHEB\\)","")
+  X = str_replace(X," \\(CHICAS\\)","")
+  X = str_replace(X," \\(CHE\\)","")
+  X = substr(X,5,nchar(X))
+  return(X)
+}
+```
+
+```{r}
+auteur="DIM"
+
+```
+
+
+```{r importation, include=FALSE}
+#######################################################################
+# Import donnnées
+#######################################################################
+# setwd("C:/Statistiques/Application/Rapport - Tableau de pilotage PMSI PILOT/PROG")
+# Données utilisées uniquement pour l'exemple...
+# etabb <- readline(prompt="Entrer un établissement : ")
+# print(etabb)
+# knitr::asis_output("Voici du texte ajouté directement via R.")
+
+# print(etabb)
+# etabb = "CHICAS"
+liste_fichier = data.frame(list.files(paste0(getwd(),"/../DB/",etabb)))
+
+colnames(liste_fichier)=c("fichier")
+liste_fichier = liste_fichier %>% 
+  filter(!grepl("~",fichier)) %>% 
+  filter(grepl(".xlsx",fichier)) %>% 
+  filter(!grepl("objet_demande",fichier)) %>%
+  filter(!grepl("historique_version",fichier)) %>% 
+  filter(!grepl("source_donnees",fichier)) %>% 
+  filter(!grepl("liste_abbreviations",fichier))
+
+# x=strsplit(str_replace(head(liste_fichier$fichier,1),".xlsx",""), split = " ")[[1]]
+# x = tail(x,1)
+# x = str_replace(x,"\\)","")
+# etablissement = str_replace(x,"\\(","")
+
+liste_fichier_1 = liste_fichier$fichier[!grepl("pilotage-etablissement",liste_fichier$fichier)]
+# liste_fichier_1 = liste_fichier_1[!grepl("médecine ambulatoire",liste_fichier_1)]
+liste_fichier_1 = liste_fichier_1[!grepl("graphique",liste_fichier_1)]
+
+liste_fichier_1_complement_1 = liste_fichier$fichier[grepl("calcul-dms-tous-sejours-hors-0-jour",liste_fichier$fichier)]
+liste_fichier_1_complement_2 = liste_fichier$fichier[grepl("calcul-dms-hors-0-jour-medecine",liste_fichier$fichier)]
+liste_fichier_1_complement_3 = liste_fichier$fichier[grepl("calcul-dms-hors-0-jour-chirurgie",liste_fichier$fichier)]
+liste_fichier_1_complement_4 = liste_fichier$fichier[grepl("calcul-dms-hors-0-jour-obstetrique",liste_fichier$fichier)]
+
+liste_fichier_1b = liste_fichier_1[grepl("detail-nb-journee-pmsi-10-nuits",liste_fichier_1)]
+liste_fichier_1c = liste_fichier_1[grepl("taux-de-medecine-ambulatoire",liste_fichier_1)]
+liste_fichier_1 = liste_fichier_1[!grepl("indicateurs-principaux",liste_fichier_1)]
+liste_fichier_1 = liste_fichier_1[!grepl("detail-nb-journee-pmsi",liste_fichier_1)]
+liste_fichier_1 = liste_fichier_1[!grepl("taux-de-medecine-ambulatoire",liste_fichier_1)]
+liste_fichier_1 = liste_fichier_1[!grepl("karnofsky",liste_fichier_1)]
+
+liste_fichier_2 = liste_fichier$fichier[grepl("pilotage-etablissement",liste_fichier$fichier)]
+liste_fichier_2 = liste_fichier_2[!grepl("soins-palliatifs",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("demographie",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("medecine-ambulatoire",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("consommables",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("activite-par-um",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("graphique",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("oncologie",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("seances-de-chimiotherapie",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("hdj-hors-seances",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("had",liste_fichier_2)]
+# liste_fichier_2 = liste_fichier_2[!grepl("HAD",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("smr",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("calcul",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("tdb-psy",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("karnofsky",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("psy-ambulatoire",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("psy-ambulatoire",liste_fichier_2)]
+liste_fichier_2 = liste_fichier_2[!grepl("seances-de-dialyse",liste_fichier_2)]
+
+liste_fichier_3 = liste_fichier$fichier[grepl("oncologie",liste_fichier$fichier)]
+liste_fichier_4 = liste_fichier$fichier[grepl("soins-palliatifs",liste_fichier$fichier)]
+liste_fichier_5 = liste_fichier$fichier[grepl("demographie",liste_fichier$fichier)]
+liste_fichier_6 = liste_fichier$fichier[grepl("seances-de-chimiotherapie",liste_fichier$fichier)]
+liste_fichier_7 = liste_fichier$fichier[grepl("activite-par-um",liste_fichier$fichier)]
+liste_fichier_7 <- liste_fichier_7[!grepl("medecine-cheb|hdj-cheb", liste_fichier_7)]
+
+liste_fichier_7a = liste_fichier$fichier[grepl("activite-par-um-hdj-cheb",liste_fichier$fichier)]
+liste_fichier_7b = liste_fichier$fichier[grepl("activite-par-um-medecine",liste_fichier$fichier)]
+
+
+liste_fichier_8 = liste_fichier$fichier[grepl("seances-de-dialyse",liste_fichier$fichier)]
+liste_fichier_9 = liste_fichier$fichier[grepl("hdj-hors-seances",liste_fichier$fichier)]
+liste_fichier_10 = liste_fichier$fichier[grepl("had",liste_fichier$fichier)]
+liste_fichier_11 = liste_fichier$fichier[grepl("smr",liste_fichier$fichier)]
+liste_fichier_12 = liste_fichier$fichier[grepl("psy",liste_fichier$fichier)]
+liste_fichier_14 = liste_fichier$fichier[grepl("consommables",liste_fichier$fichier)]
+liste_fichier_15 = liste_fichier$fichier[grepl("karnofsky",liste_fichier$fichier)]
+liste_fichier_16 = liste_fichier$fichier[grepl("psy-ambulatoire-par-lieux",liste_fichier$fichier)]
+# pwet
+
+graphique = liste_fichier$fichier[grepl("graphique",liste_fichier$fichier)]
+
+liste_fichier_1_dms = liste_fichier$fichier[grepl("calcul",liste_fichier$fichier)]
+
+my_data_1 <- lapply(liste_fichier_1, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_1b <- lapply(liste_fichier_1b, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_1c <- lapply(liste_fichier_1c, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_2 <- lapply(liste_fichier_2, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+
+
+my_data_1_compl_1 <- lapply(liste_fichier_1_complement_1, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_1_compl_2 <- lapply(liste_fichier_1_complement_2, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_1_compl_3 <- lapply(liste_fichier_1_complement_3, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_1_compl_4 <- lapply(liste_fichier_1_complement_4, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+
+my_data_3 <- lapply(liste_fichier_3, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+# ^pwet
+my_data_4 <- lapply(liste_fichier_4, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_5 <- lapply(liste_fichier_5, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_6 <- lapply(liste_fichier_6, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_7 <- lapply(liste_fichier_7, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_7a <- lapply(liste_fichier_7a, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_7b <- lapply(liste_fichier_7b, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_8 <- lapply(liste_fichier_8, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_9 <- lapply(liste_fichier_9, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_10 <- lapply(liste_fichier_10, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_11 <- lapply(liste_fichier_11, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_12 <- lapply(liste_fichier_12, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+# my_data_13 <- lapply(liste_fichier_13, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_14 <- lapply(liste_fichier_14, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_15 <- lapply(liste_fichier_15, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+my_data_16 <- lapply(liste_fichier_16, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+graphique <- lapply(graphique, function(X) openxlsx::read.xlsx(paste0(getwd(),"/../DB/",etabb,"/",X), sheet = "Worksheet"))
+# pwet
+# historique_version = openxlsx::read.xlsx("historique_version.xlsx")
+# source_donnees = openxlsx::read.xlsx("source_donnees.xlsx")
+# liste_abbreviations = openxlsx::read.xlsx("liste_abbreviations.xlsx")
+```
+
+```{r traitement, include=FALSE}
+###########
+#Traitement
+###########
+
+
+# CALCUL DMS
+# 
+# my_data_1_dms_1 <- lapply(liste_fichier_1_dms, function(X) openxlsx::read.xlsx(X, sheet = "Worksheet"))
+# new_data_1_dms_1 <- lapply(my_data_1_dms_1, function(X) mise_en_forme_tableau(X))
+# new_data_1_dms_1 = new_data_1_dms_1[[2]] 
+# # new_data_1_dms_1 = new_data_1_dms_1[[1]] %>% 
+# #   filter(`Durée Séjour PMSI` != 0)
+# new_data_1_dms_1 = new_data_1_dms_1 %>% 
+#   mutate(`2024` = ifelse(is.na(`2024`),0,`2024`))
+# new_data_1_dms_1 = new_data_1_dms_1 %>% 
+#   mutate(`2024`  = as.numeric(`2024`),
+#          `Durée Séjour PMSI` = as.numeric(`Durée Séjour PMSI`),
+#          `CALC` = `2024` * `Durée Séjour PMSI`)
+# 
+# DENOM_DMS_1 = sum(new_data_1_dms_1$`2024`, na.rm = T)
+# sum(new_data_1_dms_1$CALC)/DENOM_DMS_1
+# my_data
+if(etablissement %in% c("CHEB","CHICAS","GHT")){
+#Construction des titres
+reponse_1 = c("Détail Activité des Résumés d’Unités Médicales RUM",
+              "Détail Activité des RUM - Médecine",
+              "Détail Activité des RUM - Chirurgie",
+              "Détail Activité des RUM - Obstétrique")
+}else if (etablissement == "CHE"){
+  reponse_1 = c("Détail Activité des Résumés d’Unités Médicales RUM")
+}
+
+# reponse_10 = lapply(liste_fichier_10, function(X) traitement(X))
+# reponse_10 = unlist(reponse_10)
+# reponse_2 = lapply(liste_fichier_2, function(X) traitement(X))
+# reponse_2 = unlist(reponse_2)
+
+# pwet
+#Construction des dataframe
+# data10 = my_data_1[[1]]
+new_data_1 <- lapply(my_data_1, function(X) mise_en_forme_tableau(X))
+new_data_1b <- lapply(my_data_1b, function(X) mise_en_forme_tableau(X))
+new_data_1c <- lapply(my_data_1c, function(X) mise_en_forme_tableau(X))
+
+
+my_data_1_compl_1 <- lapply(my_data_1_compl_1, function(X) mise_en_forme_tableau(X))
+my_data_1_compl_2 <- lapply(my_data_1_compl_2, function(X) mise_en_forme_tableau(X))
+my_data_1_compl_3 <- lapply(my_data_1_compl_3, function(X) mise_en_forme_tableau(X))
+my_data_1_compl_4 <- lapply(my_data_1_compl_4, function(X) mise_en_forme_tableau(X))
+# pwte
+new_data_1b_2024 = new_data_1b[[1]]$`2024`
+# new_data_1b_2024 = nrow(new_data_1b_2024)
+new_data_1b_2025 = new_data_1b[[1]]$`2025`
+# new_data_1b
+# new_data_1b_2025 = nrow(new_data_1b_2025)
+# pwet
+ligne_add_sup_10 = data.frame(" " = "Nb de séjours PMSI > de 10 nuits (hors séances)",
+                              "2024"= new_data_1b_2024,
+                              "2025" =new_data_1b_2025,
+                              
+                              "Différence (%)\n2025-2024" = round((new_data_1b_2025 - new_data_1b_2024) / new_data_1b_2024*100 ,1))
+new_data_1_p1 = head(new_data_1[[1]],6)
+new_data_1_p2 = tail(new_data_1[[1]],6)
+colnames(ligne_add_sup_10) = colnames(new_data_1_p1)
+
+new_data_1_p1 = rbind(new_data_1_p1, ligne_add_sup_10)
+new_data_1_p1 = rbind(new_data_1_p1, new_data_1_p2)
+new_data_1[[1]] = new_data_1_p1
+# pwet
+new_data_1_p1 = head(new_data_1[[1]],10)
+new_data_1_p2 = tail(new_data_1[[1]],3)
+# pwet
+new_data_1c_2024 = round(new_data_1c[[1]]$`2024`[2]/new_data_1c[[1]]$`2024`[1]*100,1)
+new_data_1c_2025 = round(new_data_1c[[1]]$`2025`[2]/new_data_1c[[1]]$`2025`[1]*100,1)
+ligne_add_sup_9 = data.frame(" " = "Taux de médecine ambulatoire (%)",
+                              "2024" =new_data_1c_2024,
+                              "2025" =new_data_1c_2025,
+                              "Différence (%)\n2025-2024" = round((new_data_1c_2025 - new_data_1c_2024) / new_data_1c_2024*100,1))
+colnames(ligne_add_sup_9) = colnames(new_data_1b[[1]])
+new_data_1_p1 = rbind(new_data_1_p1, ligne_add_sup_9)
+new_data_1_p1 = rbind(new_data_1_p1, new_data_1_p2)
+new_data_1[[1]] = new_data_1_p1
+# pwet
+for (j in seq_along(my_data_2)){
+  my_data_2[[j]] =  mise_en_forme_tableau(my_data_2[[j]] )
+}
+
+if(etablissement %in% c("CHICAS","CHEB")){
+  for (j in seq_along(my_data_6)){
+    my_data_6[[j]] =  mise_en_forme_tableau(my_data_6[[j]] )
+  }
+}
+
+new_data_3 <- lapply(my_data_3, function(X) mise_en_forme_tableau(X))
+new_data_4 <- lapply(my_data_4, function(X) mise_en_forme_tableau(X))
+
+new_data_5 <- lapply(my_data_5, function(X) mise_en_forme_tableau(X))
+new_data_7 <- lapply(my_data_7, function(X) mise_en_forme_tableau(X))
+# my_data_8 <- lapply(my_data_8, function(X) mise_en_forme_tableau(X))
+# pwet
+colnames(new_data_7[[1]])[colnames(new_data_7[[1]]) == "Nb de passages dans le service"] = " "
+if(etabb == "CHEB"){
+  new_data_7a <- lapply(my_data_7a, function(X) mise_en_forme_tableau(X))
+  new_data_7b <- lapply(my_data_7b, function(X) mise_en_forme_tableau(X))
+  colnames(new_data_7a[[1]])[colnames(new_data_7a[[1]]) == "Nb de passages dans le service"] = " "
+  colnames(new_data_7b[[1]])[colnames(new_data_7b[[1]]) == "Nb de passages dans le service"] = " "
+}
+if(etabb %in% c("CHEB","CHICAS")){
+  new_data_8 <- lapply(my_data_8, function(X) mise_en_forme_tableau(X))
+}
+new_data_9 <- lapply(my_data_9, function(X) mise_en_forme_tableau(X))
+
+# new_data_10 <- lapply(my_data_10, function(X) mise_en_forme_tableau(X))
+# pwet
+if(etablissement == "CHICAS"){
+  new_data_10_1 = mise_en_forme_tableau(my_data_10[[1]])
+  new_data_10_2 = mise_en_forme_tableau_exp_10(my_data_10[[2]])
+  new_data_10_3 = mise_en_forme_tableau(my_data_10[[3]])
+  new_data_10_4 = mise_en_forme_tableau(my_data_10[[4]])
+  new_data_10_5 = mise_en_forme_tableau(my_data_10[[5]])
+  new_data_11 <- lapply(my_data_11, function(X) mise_en_forme_tableau(X))
+  new_data_14 <- lapply(my_data_14, function(X) mise_en_forme_tableau(X))
+  new_data_15 <- lapply(my_data_15, function(X) mise_en_forme_tableau(X))
+  
+  new_data_11 <- lapply(my_data_11, function(X) mise_en_forme_tableau(X))
+  file_active_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[1]
+  sej_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[2]
+  sem_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[3]
+  journee_smr_HC = new_data_11[[1]]$`Différence (%)\n2025-2024`[4]
+  journee_smr_HP = new_data_11[[1]]$`Différence (%)\n2025-2024`[5]
+  
+  taux_smr_rh2 = round(new_data_11[[2]]$`2025`[3]/(new_data_11[[2]]$`2025`[1]+new_data_11[[2]]$`2025`[2]+new_data_11[[2]]$`2025`[3])*100,0)
+  csarr = round(new_data_11[[2]]$`2025`[5],0)
+}
+# pwet
+if(etablissement == "CHE"){
+  new_data_11 <- lapply(my_data_11, function(X) mise_en_forme_tableau(X))
+  file_active_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[1]
+  sej_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[2]
+  sem_smr = new_data_11[[1]]$`Différence (%)\n2025-2024`[3]
+  journee_smr_HC = new_data_11[[1]]$`Différence (%)\n2025-2024`[4]
+  journee_smr_HP = new_data_11[[1]]$`Différence (%)\n2025-2024`[5]
+  
+  taux_smr_rh2 = round(new_data_11[[2]]$`2025`[3]/(new_data_11[[2]]$`2025`[1]+new_data_11[[2]]$`2025`[2]+new_data_11[[2]]$`2025`[3])*100,0)
+  csarr = round(new_data_11[[2]]$`2025`[5],0)
+}
+
+if(etablissement == "CHEB"){
+  new_data_12 <- lapply(my_data_12, function(X) mise_en_forme_tableau(X))
+  new_data_16 <- lapply(my_data_16, function(X) mise_en_forme_tableau(X))
+}
+
+# new_data_10 <- lapply(my_data_10, function(X) mise_en_forme_tableau(X))
+graphique <- lapply(graphique, function(X) mise_en_forme_tableau(X))
+
+sum_graph=data.frame(graphique[[1]]$Période)
+colnames(sum_graph)="Période"
+for(i in 1:(length(graphique))){
+  sum_graph = merge(sum_graph,graphique[[i]], by="Période")
+}
+
+sum_graph = sum_graph %>% 
+  mutate(`Mois` = substr(`Période`,8,9),
+         Année = substr(`Période`,1,4))
+
+
+
+if(etablissement == "CHE"){
+  sum_graph = sum_graph %>% 
+  mutate(`Nb séjours de MCO` = `Nb séjours de MCO` %>%as.numeric(),
+         `Nb séances` = `Nb séances` %>% as.numeric()
+         )
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séances"] = "\nNb séances"
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séjours de MCO"] = "Nb de séjours\nde MCO"
+}
+
+# pwet
+
+if(etablissement %in% c("CHEB","CHICAS","GHT")){
+  sum_graph = sum_graph %>% 
+  mutate(`Nb séjours de MCO` = `Nb séjours de MCO` %>% as.numeric(),
+         `Nb séances` = `Nb séances` %>% as.numeric(),
+         `Nb séjours de Médecine` = `Nb séjours de Médecine` %>% as.numeric(),
+         `Nb séjours de Chirurgie` = `Nb séjours de Chirurgie` %>% as.numeric(),
+         `Nb séjours d'Obstétrique` = `Nb séjours d'Obstétrique` %>% as.numeric()
+         )
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séances"] = "\nNb séances"
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séjours de MCO"] = "Nb de séjours\nde MCO"
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séjours de Médecine"] = "Nb de séjours\nde Médecine"
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séjours de Chirurgie"] = "Nb de séjours\nde Chirurgie"
+  colnames(sum_graph)[colnames(sum_graph) == "Nb séjours d'Obstétrique"] = "Nb de séjours\nd'Obstétrique"
+}
+
+
+sum_graph = sum_graph %>% 
+  mutate(Mois = ifelse(Mois == "01", "janv",Mois),
+         Mois = ifelse(Mois == "02", "fév",Mois),
+         Mois = ifelse(Mois == "03", "mars",Mois),
+         Mois = ifelse(Mois == "04", "avr",Mois),
+         Mois = ifelse(Mois == "05", "mai",Mois),
+         Mois = ifelse(Mois == "06", "juin",Mois),
+         Mois = ifelse(Mois == "07", "juill",Mois),
+         Mois = ifelse(Mois == "08", "août",Mois),
+         Mois = ifelse(Mois == "09", "sept",Mois),
+         Mois = ifelse(Mois == "10", "oct",Mois),
+         Mois = ifelse(Mois == "11", "nov",Mois),
+         Mois = ifelse(Mois == "12", "déc",Mois)
+         )
+sum_graph$Mois = factor(sum_graph$Mois, levels=c("janv","fév","mars","avr","mai","juin","juill","août","sept", "oct","nov","déc"))
+# pwet
+if(etabb == "CHEB"){
+  colnames(sum_graph)=c("Période","Nb de séjours\nde MCO","\nNb séances","Nb de séjours\nde Médecine","Nb de séjours\nde Chirurgie","Nb de séjours\nd'Obstétrique","Mois","Année")
+}
+
+sum_graph_new = sum_graph %>% 
+  mutate(`Nb de Séjours\n+ séances` = `Nb de séjours\nde MCO`)
+
+library(tidyr)
+sum_graph_new = sum_graph_new %>% 
+  pivot_longer(!c(Mois,Année,Période), names_to="Légende",values_to="Nb de séjours")
+sum_graph_new = data.frame(sum_graph_new)
+colnames(sum_graph_new)=c("Période","Mois","Année","Légende","Nb de séjours")
+
+sum_graph_new_2025 = sum_graph_new %>% 
+  filter(`Année` == "2025") %>% 
+  filter(!`Légende` %in% c("Nb de Séjours\n+ séances","Nb de séjours\nde MCO"))
+sum_graph_new_2025 = sum_graph_new_2025 %>% 
+  mutate(Légende = case_when(Légende == "\nNb séances" ~ "Séances",
+                             Légende == "Nb de séjours\nde Médecine" ~ "Médecine",
+                             Légende == "Nb de séjours\nde Chirurgie" ~ "Chirurgie",
+                             Légende == "Nb de séjours\nd'Obstétrique" ~ "Obstétrique"))
+sum_graph_new_2024_tot = sum_graph_new %>% 
+  filter(`Année` == "2024") %>% 
+  filter(`Légende` == "Nb de Séjours\n+ séances")
+# library(tidyr)
+# pwet
+sum_graph_new_2025 = sum_graph_new_2025 %>% 
+  mutate(`Nb de séjours` = as.numeric(`Nb de séjours` ))
+
+sum_graph_new_2025$Légende = factor(sum_graph_new_2025$Légende, levels=c("Séances",
+                                                                         "Médecine",
+                                                                         "Chirurgie",
+                                                                         "Obstétrique"))
+
+sum_graph_new_2025$Année = "25"
+
+sum_graph_new = sum_graph_new %>% 
+  mutate(`Nb de séjours` = as.numeric(`Nb de séjours`))
+sum_graph_new_2024_tot = sum_graph_new_2024_tot %>% 
+  mutate(`Nb de séjours` = as.numeric(`Nb de séjours`))
+# sum_graph_new_2025 = sum_graph_new_2025 %>% 
+#   mutate(Période = paste0(Mois, "-", Année))
+# pwet
+g0_init = ggplot(sum_graph_new_2025) + 
+    geom_bar(aes(x = Mois , y =`Nb de séjours`, fill=Légende ), stat = 'identity') + scale_fill_manual(
+      values = c("Séances" = "#E2BC7A", 
+                 "Médecine" = "#C0504D",
+                 "Chirurgie" = "#9BBB59",
+                 "Obstétrique" = "#8064A2"))+
+   geom_line(data = sum_graph_new_2024_tot, aes(x = Mois, y = `Nb de séjours`, group = 1, color = "Séj. MCO\n+ séances"), size = 1.5) +
+  scale_color_manual(values = "#3474CF") +  # Couleur bleue en code hexadécimal
+  theme_minimal() + scale_y_continuous(breaks = seq(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400), by = 400)) +  # Breaks tous les 400
+  guides(fill = guide_legend(title = "2025"),
+         color = guide_legend(title = "2024")) +  # Enlever les titres des légendes
+  theme(panel.grid.major.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()
+        # axis.text.x = element_text(angle = 45, hjust = 1)
+        )  
+g0_init = g0_init+ scale_y_continuous(limits = c(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400)), breaks = seq(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400), by = 500))
+
+g0_init_2 = ggplot(sum_graph_new_2025) + 
+  geom_bar(aes(x = Mois, y = `Nb de séjours`, fill = Légende), stat = 'identity') + 
+  scale_fill_manual(values = c("Séances" = "#E2BC7A", 
+                               "Médecine" = "#C0504D",
+                               "Chirurgie" = "#9BBB59",
+                               "Obstétrique" = "#8064A2")) +
+  geom_line(data = sum_graph_new_2024_tot, aes(x = Mois, y = `Nb de séjours`, group = 1, color = "Séjours MCO\n+ séances"), size = 1.5) +
+  scale_color_manual(values = "#3474CF") +  
+  theme_minimal() +  ggtitle("Nombre de séjours MCO/séances 2024 & 2025")+ 
+  scale_y_continuous(breaks = seq(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours` + 400), by = 400)) +  
+  guides(fill = FALSE, color = FALSE) +  # Enlever les légendes de couleur et de remplissage
+  theme(
+    panel.border = element_blank(),  
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(size = 10),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    # axis.text.x = element_text(color = "black", size = 10, angle = 45, hjust = 1),
+    legend.title = element_text(color = "white"),  # Modifier la couleur du titre de légende
+    legend.key = element_rect(fill = "white", color = NA),
+    legend.background = element_rect(color = NA)
+  )
+g0_init_2 = g0_init_2+ scale_y_continuous(limits = c(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400)), breaks = seq(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400), by = 500))
+# pwet
+# pwet
+# library(tidyr)
+# 
+# sum_graph_2024 = sum_graph %>%
+#   filter(substr(Période,1,4) == "2024") %>% 
+#   # mutate(mois = substr(Période,8,9)) %>% 
+#   select(-Période,-Année)
+# sum_graph_2025 = sum_graph %>%
+#   filter(substr(Période,1,4) == "2025") %>% 
+#   # mutate(mois = substr(Période,8,9)) %>% 
+#   select(-Période,-Année)
+# sum_graph_f = merge(sum_graph_2024,sum_graph_2025, by="Mois", all.x=T)
+  sum_graph = sum_graph %>% 
+  mutate(`Nb de séjours\nde MCO`  = as.numeric(`Nb de séjours\nde MCO` ))
+  sum_graph <- sum_graph %>%
+    complete(Mois, Année, fill = list(`Nb de séjours\nde MCO` = 0))
+  
+
+  
+if(etablissement %in% c("CHEB","CHICAS","GHT")){
+
+sum_graph = sum_graph %>% 
+  mutate(`Nb de séjours\nde MCO` = as.numeric(`Nb de séjours\nde MCO`))
+  g0 = ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nde MCO`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED")) +
+  theme(
+    panel.border = element_blank(),  
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(size = 10),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    # axis.text.x = element_text(color = "black", 
+    #                            size = 10, angle = 45, hjust = 1),
+    # legend.text = element_text(color = "white"),
+    legend.title = element_text(color = "white"),
+    legend.key = element_rect(fill = "white", color = NA),
+    legend.background = element_rect(color = NA)
+  ) + 
+  expand_limits(x = 0, y = 0) +
+  xlab(" ") + 
+  ylab(" ") + 
+  ggtitle("Nb de séjours de MCO")
+  g0 = g0+ scale_y_continuous(limits = c(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400)), breaks = seq(0, max(sum_graph_new$`Nb de séjours`, sum_graph_new_2024_tot$`Nb de séjours`+400), by = 500))
+
+  g1 = ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nde MCO`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED")) +
+  theme(
+    panel.border = element_blank(),  
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(size = 10),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    # axis.text.x = element_text(color = "black", 
+    #                            size = 10, angle = 45, hjust = 1),
+    legend.text = element_text(color = "white"),
+    legend.title = element_text(color = "white"),
+    legend.key = element_rect(fill = "white", color = NA),
+    legend.background = element_rect(color = NA)
+  ) + 
+  expand_limits(x = 0, y = 0) +
+  xlab(" ") + 
+  ylab(" ") + 
+  ggtitle("Nb de séjours de MCO") + 
+  theme(legend.position = "none")
+  
+  g2 = ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nde Médecine`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED")) + theme(
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      # axis.text.x = element_text(color = "black", 
+      #                        size = 10, angle = 45, hjust = 1),
+      legend.text = element_text(color = "white"),
+      legend.title = element_text(color = "white"),
+      legend.key = element_rect(fill = "white", color = NA),  # This hides the borders of the legend squares
+      legend.background = element_rect(color = NA)
+    ) + expand_limits(x = 0, y = 0)+
+    xlab(" ")  + ylab(" ") + ggtitle("Nb de séjours de médecine (hors séances)")+ theme(legend.position="none")
+    # scale_color_discrete(guide = guide_legend(override.aes = list(color = "white")))
+
+  g3 = ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nde Chirurgie`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED")) + theme(
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      # axis.text.x = element_text(color = "black", 
+      #                        size = 10, angle = 45, hjust = 1),
+      legend.text = element_text(color = "white"),
+      legend.title = element_text(color = "white"),
+      legend.key = element_rect(fill = "white", color = NA),  # This hides the borders of the legend squares
+      legend.background = element_rect(color = NA)
+    ) + expand_limits(x = 0, y = 0)+
+    xlab(" ") + ylab(" ") + ggtitle("Nb de séjours de chirurgie (hors séances)")+ theme(legend.position="none")
+    # scale_color_discrete(guide = guide_legend(override.aes = list(color = "white")))
+  # 
+  # 
+  g4 <- ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nd'Obstétrique`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED")) +
+    theme(
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      # axis.text.x = element_text(
+      #                        size = 10, angle = 45, hjust = 1),
+      legend.text = element_text(color = "white"),
+      legend.title = element_text(color = "white"),
+      legend.key = element_rect(fill = "white", color = NA),  # This hides the borders of the legend squares
+      legend.background = element_rect(color = NA)
+    )  + expand_limits(x = 0, y = 0)+
+    xlab(" ") + ylab(" ") + ggtitle("Nb de séjours d'obstétrique")+ theme(legend.position="none")
+  # scale_color_discrete(guide = guide_legend(override.aes = list(color = "white")))
+
+  g5 = ggplot(data=sum_graph, aes(x = Mois, y = `\nNb séances`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED"))+ theme(
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.line = element_blank(),
+      axis.ticks = element_blank(),
+      # axis.text.x = element_text( color = "black", 
+      #                        size = 10, angle = 45, hjust = 1),
+      legend.text = element_text(color = "white"),
+      legend.title = element_text(color = "white"),
+      legend.key = element_rect(fill = "white", color = NA),  # This hides the borders of the legend squares
+      legend.background = element_rect(color = NA)
+    )  + expand_limits(x = 0, y = 0)+
+    xlab(" ")  + ylab(" ") + ggtitle("Nb séances")+ theme(legend.position="none")
+
+  
+  legend_g0 <- cowplot::get_legend(g0)
+  legend_g1 <- cowplot::get_legend(g1)
+  legend_g0_init <- cowplot::get_legend(g0_init)
+  res = ggarrange(
+    ggarrange(g0_init_2,legend_g0_init,ncol=2, widths = c(6,1)),
+    ggarrange(g5,legend_g0,ncol=2, widths = c(6,1)),
+    nrow = 2)
+  
+  res_2 = ggarrange(
+    ggarrange(g2,legend_g1,ncol=2, widths = c(6,1)),
+    ggarrange(g3,legend_g1,ncol=2, widths = c(6,1)),
+    ggarrange(g4,legend_g0,ncol=2, widths = c(6,1)),
+    nrow = 3)
+}
+
+if(etablissement == "CHE"){
+  #   sum_graph = sum_graph %>% 
+  # mutate(`Nb de séjours\nde MCO`  = as.numeric(`Nb de séjours\nde MCO` ))
+  g0 = ggplot(data=sum_graph, aes(x = Mois, y = `Nb de séjours\nde MCO`, fill = `Année`)) +
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = c("#3474CF", "#00ADED"))+ theme(
+        panel.border = element_blank(),  
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        # axis.text.x = element_text(color = "black", 
+        #                        size = 10, angle = 45, hjust = 1),
+        # axis.text.x = element_blank(),
+        # legend.text = element_text(color = "white"),
+        # legend.title = element_text(color = "white"),
+        legend.key = element_rect(fill = "white", color = NA),  # This hides the borders of the legend squares
+        legend.background = element_rect(color = NA)
+      )  + expand_limits(x = 0, y = 0)+
+      xlab(" ") + ylab(" ") + ggtitle("Nb de séjours de MCO", )
+    res_2 = g0
+}
+# pwet
+if(my_data_2 %>% length > 0){
+  
+  data_second=data.frame()
+  for (j in 1:length(my_data_2)){
+    if(dim(my_data_2[[j]])[2] == 4){
+      colnames(my_data_2[[j]]) = c(" ", "2024", "2025", "Différence (%)\n2025-2024")
+      data_second = rbind(data_second, my_data_2[[j]])
+    }else{ # 
+        my_data_2[[j]] = my_data_2[[j]] %>% dplyr::select(-`Nb de séjours`)
+        colnames(my_data_2[[j]]) = c(" ", "2024", "2025", "Différence (%)\n2025-2024")
+        data_second = rbind(data_second, my_data_2[[j]])
+    }
+  }
+  data_second = data_second %>% 
+    mutate(` ` = ifelse(` ` == "Accouchements par voie basse", "Nb d'accouchements par voie basse", ` `))
+  data_second = data_second %>% 
+    mutate(` ` = ifelse(` ` == "Nb. de  naissances", "Nb de naissances", ` `))
+  data_second = data_second %>% 
+    mutate(` ` = ifelse(` ` == "Césariennes", "Nb de césariennes", ` `))
+  
+  data_second_01 = head(data_second,3)
+  nb_uhcd = data_second$`Différence (%)\n2025-2024`[3]
+  # nb_uhcd = data_second$`Différence (%)\n2025-2024`[2]
+  # data_second_01$`2024`[1]
+  # pwet
+  if(etablissement %in%c("CHICAS", "CHEB")){
+    data_2024_urg_perc = round(data_second_01$`2024`[3]/(data_second_01$`2024`[1]-data_second_01$`2024`[2])*100,1)
+    data_2025_urg_perc = round(data_second_01$`2025`[3]/(data_second_01$`2025`[1]-data_second_01$`2025`[2])*100,1)
+    # pwet
+    data_second_02 = data.frame(` ` = "Taux de passage aux urgences (%)", 
+                                `2024` = format(data_2024_urg_perc,nsmall=1),
+                                `2025` = format(data_2025_urg_perc,nsmall=1),
+                                `Différence (%)\n2025-2024` = round((data_2025_urg_perc - data_2024_urg_perc) / data_2024_urg_perc*100 ,1))
+    colnames(data_second_02) = colnames(data_second)
+    taux_passage=data_second_02$`2025`[1]
+    diff_taux_passage=data_second_02$`Différence (%)\n2025-2024`[1]
+    nb_uhcd = data_second$`Différence (%)\n2025-2024`[4]
+    data_second_03 = tail(data_second, dim(data_second)[1]-2)
+    data_second = rbind(data_second_01,data_second_02)
+    data_second = rbind(data_second,data_second_03)
+  }else{
+    data_2024_urg_perc = round(data_second_01$`2024`[2]/(data_second_01$`2024`[1])*100,1)
+    data_2025_urg_perc = round(data_second_01$`2025`[2]/(data_second_01$`2025`[1])*100,1)
+    # pwet
+    data_second_02 = data.frame(` ` = "Taux de passage aux urgences (%)", 
+                                `2024` = paste0(format(data_2024_urg_perc,nsmall=1)),
+                                `2025` = paste0(format(data_2025_urg_perc,nsmall=1)),
+                                `Différence (%)\n2025-2024` = round((data_2025_urg_perc - data_2024_urg_perc) / data_2024_urg_perc*100 ,1))
+    colnames(data_second_02) = colnames(data_second)
+    taux_passage=data_second_02$`2025`[1]
+    diff_taux_passage=data_second_02$`Différence (%)\n2025-2024`[1]
+    data_second_03 = tail(data_second, dim(data_second)[1]-2)
+    data_second = rbind(data_second_01,data_second_02)
+    # pwet
+    data_second$` `[which(data_second$` ` == "Nb d'accouchements par voie basse") + 1] <- "DMS, accouchements par voie basse (jours)"
+    data_second$` `[which(data_second$` ` == "Nb de césariennes") + 1] <- "DMS, césariennes (jours)"
+    
+    
+  }
+    data_second$` `[which(data_second$` ` == "Nb d'accouchements par voie basse") + 1] <- "DMS, accouchements par voie basse (jours)"
+    data_second$` `[which(data_second$` ` == "Nb de césariennes") + 1] <- "DMS, césariennes (jours)"
+    
+    data_second = data_second %>% 
+      filter(!` ` %in% c("Nb de séances","Nb de séjours dans la période"))
+    data_second = tail(data_second,dim(data_second)[1]-1)
+}
+
+
+#On decoupe en 3 tableaux
+data_urgences = data_second %>% 
+  filter(` ` %in% c("Taux de passage aux urgences (%)", "Nb d'UHCD"))
+data_urgences = data_urgences %>% 
+  arrange(desc(` `))
+
+data_chirurgie = data_second %>% 
+  filter(` ` %in% c("Nb de séjours pour pose de prothèses (PTH + PTG + PUC)"))
+
+data_obstétrique = data_second %>% 
+  filter(` ` %in% c("Nb de naissance","File active","Nb d'accouchements par voie basse","DMS, accouchements par voie basse (jours)","Nb de césariennes","DMS, césariennes (jours)","DMS, accouchements par voie basse (jours)"))
+# pwet
+if(etablissement == "CHEB"){
+somme_naissance_annee_en_cours = as.numeric(data_obstétrique$`2025`[1])+as.numeric(data_obstétrique$`2025`[3])
+somme_naissance_annee_prec = as.numeric(data_obstétrique$`2024`[1])+as.numeric(data_obstétrique$`2024`[3])
+diff_naissance = somme_naissance_annee_en_cours - somme_naissance_annee_prec
+diff_avb = as.numeric(data_obstétrique$`2025`[1])-as.numeric(data_obstétrique$`2024`[1])
+diff_cesarienne = as.numeric(data_obstétrique$`2025`[3])-as.numeric(data_obstétrique$`2024`[3])
+}else{ # etablissement CHICAS
+  somme_naissance_annee_en_cours = as.numeric(data_obstétrique$`2025`[2])+as.numeric(data_obstétrique$`2025`[4])
+  somme_naissance_annee_prec = as.numeric(data_obstétrique$`2024`[2])+as.numeric(data_obstétrique$`2024`[4])
+  diff_naissance = somme_naissance_annee_en_cours - somme_naissance_annee_prec
+  diff_avb = as.numeric(data_obstétrique$`2025`[2])-as.numeric(data_obstétrique$`2024`[2])
+  diff_cesarienne = as.numeric(data_obstétrique$`2025`[4])-as.numeric(data_obstétrique$`2024`[4])
+}
+if(my_data_6 %>% length > 0){
+  if(etablissement %in% c("CHEB","CHICAS","GHT")){
+    data_six=data.frame()
+    for (j in 1:length(my_data_6)){
+      print(j)
+      print(colnames(my_data_6[[j]]))
+      if(dim(my_data_6[[j]])[2] == 4){
+        colnames(my_data_6[[j]]) = c(" ", "2024", "2025", "Différence (%)\n2025-2024")
+        data_six = rbind(data_six, my_data_6[[j]])
+      }else{
+        my_data_6[[j]] = my_data_6[[j]] %>% dplyr::select(-` `)
+        colnames(my_data_6[[j]]) = c(" ", "2024", "2025", "Différence (%)\n2025-2024")
+        data_six = rbind(data_six, my_data_6[[j]])
+      }
+    }
+  }
+}
+# pwet
+if(etablissement == "CHE"){
+  # dat_list <- list(new_data_1[[1]])
+  
+  dat_list <- list(new_data_1[[1]])
+
+  tmp_1 = head(dat_list[[1]], 8)
+  file_active_pt = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[1]),1)
+  nb_sejours = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[2]),1)
+  nb_sej_court = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[3]),1)
+  tmp_1 = rbind(tmp_1,my_data_1_compl_1[[1]])
+  dms_chiffre=round(as.numeric(tmp_1$`2025`[9]),1)
+  dms_taux = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[9]),1)
+  tmp_1_f = tail(dat_list[[1]], 3)
+  valo_chiffre= tmp_1_f$`2025`[1]-tmp_1_f$`2024`[1]
+  valo_taux= tmp_1_f$`Différence (%)\n2025-2024`[1]
+  tms_chiffre_annee_prec = tmp_1_f$`2024`[2] 
+  tms_chiffre_annee_en_cours = tmp_1_f$`2025`[2] 
+  tms_taux = tmp_1_f$`Différence (%)\n2025-2024`[2]
+  
+  dat_list[[1]] = rbind(tmp_1, tmp_1_f)
+    
+  dat_list = around_df(dat_list[[1]], IP_DMS=T)
+  dat_list = mettre_un_plus_df(dat_list)
+    
+  dat_list = dat_list %>%
+    theme_table( affiche_Nb. = F, colour=T) %>% 
+    line_spacing(space = 1, part = "body")
+
+}else{
+    dat_list <- list(new_data_1)
+  
+  # pwet
+    tmp_1 = head(dat_list[[1]][[1]], 11)
+    file_active_pt = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[1]),1)
+    nb_sejours = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[2]),1)
+    nb_seances = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[8]),1)
+    chiffre_chir_ambu = round(as.numeric(tmp_1$`2025`[10]),1)
+    taux_chir_ambu = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[10]),1)
+    
+    dms_chiffre_annee_en_cours=round(as.numeric(my_data_1_compl_1[[1]]$`2025`),1)
+    dms_chiffre_annee_prec=round(as.numeric(my_data_1_compl_1[[1]]$`2024`),1)
+    tmp_1 = rbind(tmp_1,my_data_1_compl_1[[1]])
+    tmp_1_f = tail(dat_list[[1]][[1]], 3)
+    valo_chiffre= tmp_1_f$`2025`[1]-tmp_1_f$`2024`[1]
+    valo_taux= tmp_1_f$`Différence (%)\n2025-2024`[1]
+    tms_chiffre_annee_prec = tmp_1_f$`2024`[2] 
+    tms_chiffre_annee_en_cours = tmp_1_f$`2025`[2] 
+    tms_taux = tmp_1_f$`Différence (%)\n2025-2024`[2]
+    dat_list[[1]][[1]] = rbind(tmp_1, tmp_1_f)
+    
+    if(etablissement =="CHEB"){
+      tmp_1 = head(dat_list[[1]][[2]], 10)
+      tmp_1 = rbind(tmp_1,my_data_1_compl_2[[1]])
+      tmp_1_f = tail(dat_list[[1]][[2]], 3)
+      dat_list[[1]][[2]] = rbind(tmp_1, tmp_1_f)
+    }else{
+      tmp_1 = head(dat_list[[1]][[2]], 7)
+      tmp_1 = rbind(tmp_1,my_data_1_compl_2[[1]])
+      tmp_1_f = tail(dat_list[[1]][[2]], 3)
+      dat_list[[1]][[2]] = rbind(tmp_1, tmp_1_f)
+    }
+    if(etablissement =="CHEB"){
+      tmp_1 = head(dat_list[[1]][[3]], 8)
+      tmp_1 = rbind(tmp_1,my_data_1_compl_3[[1]])
+      tmp_1_f = tail(dat_list[[1]][[3]], 3)
+      dat_list[[1]][[3]] = rbind(tmp_1, tmp_1_f)
+    }else{
+      tmp_1 = head(dat_list[[1]][[3]], 7)
+      tmp_1 = rbind(tmp_1,my_data_1_compl_3[[1]])
+      tmp_1_f = tail(dat_list[[1]][[3]], 3)
+      dat_list[[1]][[3]] = rbind(tmp_1, tmp_1_f)
+    }
+    tmp_1 = head(dat_list[[1]][[4]], 7)
+    tmp_1 = rbind(tmp_1,my_data_1_compl_4[[1]])
+    tmp_1_f = tail(dat_list[[1]][[4]], 2)
+    dat_list[[1]][[4]] = rbind(tmp_1, tmp_1_f)
+    
+  
+    for (j in seq_along(dat_list[[1]])) {
+    dat_list[[1]][[j]] = around_df(dat_list[[1]][[j]], IP_DMS=T)
+    dat_list[[1]][[j]] = mettre_un_plus_df(dat_list[[1]][[j]])
+    # dat_list[[1]][[j]] = tab_to_string(dat_list[[1]][[j]])
+    
+    dat_list[[1]][[j]] = dat_list[[1]][[j]] %>%
+      theme_table( affiche_Nb. = F, colour =T) %>%
+      line_spacing(space = 1, part = "body")
+    dat_list[[1]][[j]]=dat_list[[1]][[j]] %>% 
+          width(j = c(1,2,3,4),
+            width = c(1,1,3.5,3.5))
+    }
+}
+
+# if(etablissement == "CHEB"){
+#     dat_list_10 <- list(new_data_10)
+#     for (j in seq_along(dat_list_10[[1]])) {
+#       dat_list_10[[1]][[j]] = around_df(dat_list_10[[1]][[j]])
+#       dat_list_10[[1]][[j]] = mettre_un_plus_df(dat_list_10[[1]][[j]])
+#       # dat_list[[1]][[j]] = tab_to_string(dat_list[[1]][[j]])
+#       
+#       dat_list_10[[1]][[j]] = dat_list_10[[1]][[j]] %>%
+#         theme_table( affiche_Nb. = F) %>%
+#         line_spacing(space = 1, part = "body")
+#       dat_list_10[[1]][[j]]=dat_list_10[[1]][[j]] %>% 
+#             width(j = c(1,2,3,4),
+#               width = c(1,1,3.5,3.5))
+#   }
+# }
+# pwet
+
+if(etablissement %in% c("CHICAS","CHEB")){
+  if(length(my_data_2)>0){
+    data_urgences <- list(data_urgences)
+    data_urgences = data_urgences[[1]]
+    data_urgences = around_df(data_urgences)
+    data_urgences = mettre_un_plus_df(data_urgences)
+  
+    data_urgences = data_urgences %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+    
+    data_chirurgie <- list(data_chirurgie)
+    data_chirurgie = data_chirurgie[[1]]
+    chiffre_prothese_en_cours = data_chirurgie$`2025`[1]
+    chiffre_prothese_annee_prec = data_chirurgie$`2024`[1]
+    diff_prothese = data_chirurgie$`Différence (%)\n2025-2024`[1]
+    data_chirurgie = around_df(data_chirurgie)
+    data_chirurgie = mettre_un_plus_df(data_chirurgie)
+  
+    data_chirurgie = data_chirurgie  %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+    
+    data_obstétrique <- list(data_obstétrique)
+    data_obstétrique = data_obstétrique[[1]]
+    
+    # data_obstétrique$2025
+    data_obstétrique = around_df(data_obstétrique)
+    data_obstétrique = mettre_un_plus_df(data_obstétrique)
+  
+    data_obstétrique = data_obstétrique  %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+  }
+}
+if(etablissement %in% c("CHE")){
+  if(length(my_data_2)>0){
+    dat_list_2 <- list(data_urgences)
+  
+    dat_list_2 = around_df(dat_list_2[[1]])
+    dat_list_2 = mettre_un_plus_df(dat_list_2)
+  
+    dat_list_2 = dat_list_2 %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+  }
+}
+# pwet
+if(etablissement == "CHICAS"){
+    dat_list_13 <- list(data_second)
+  
+    dat_list_13 = around_df(dat_list_13[[1]])
+    dat_list_13 = mettre_un_plus_df(dat_list_13)
+  
+    dat_list_13 = dat_list_13 %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+    
+    #Consommables
+    dat_list_14 <- list(new_data_14)
+  
+    dat_list_14 = dat_list_14[[1]][[1]]
+    dat_list_14 = around_df(dat_list_14)
+    dat_list_14 = mettre_un_plus_df(dat_list_14)
+  
+    dat_list_14 = dat_list_14 %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+    
+    new_data_15 = new_data_15[[1]]
+    new_data_15 = new_data_15 %>% 
+      select(IK, `2024`, `2025`) %>% 
+      mutate(IK = paste0("IK-", IK))
+    new_data_15[is.na(new_data_15)] = 0
+    
+    data_long_karnofsky <- tidyr::pivot_longer(new_data_15, cols = c(`2024`, `2025`), 
+                                           names_to = "Année", values_to = "Valeur")
+
+# Inverser l'ordre des années
+data_long_karnofsky$Année <- factor(data_long_karnofsky$Année, levels = c("2024", "2025"))
+
+# Créer le graphique
+graph_long_karnofsky = ggplot(data_long_karnofsky, aes(x = Valeur, y = IK, fill = Année)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Barres côte à côte
+  geom_label(
+    aes(label = Valeur),  # Valeurs à afficher
+    position = position_dodge2(width = 0.9),  # Utiliser position_dodge2 pour un alignement précis
+    vjust = 0.5,  # Position au-dessus des barres
+    hjust = -0.5,
+    size = 3,  # Taille du texte
+    fill = "white",  # Intérieur blanc
+    color = "#3474CF",  # Texte et bordure bleue
+    label.size = 0.25  # Taille de la bordure
+  ) +
+  scale_fill_manual(values = c("2024" = "#3474CF", "2025" = "#00ADED")) +  # Couleurs spécifiques
+  labs(
+    title = "",
+    x = "Mesures",
+    y = ""
+  ) +
+  scale_x_continuous(
+    breaks = seq(0, max(data_long_karnofsky$Valeur) + 100, by = 100),  # Grille avec intervalles de 100
+    limits = c(0, max(data_long_karnofsky$Valeur) + 50)  # Limites de l'axe X de 0 à max + 50
+  ) +
+  scale_y_discrete(limits = rev(levels(data_long_karnofsky$IK))) +  # Inverser l'ordre des IK
+  theme_minimal() +  # Fond blanc minimal
+  theme(
+    axis.text.y = element_text(color = "black", size = 12),  # Étiquettes Y (IK)
+    axis.text.x = element_blank(),  # Déplacer les étiquettes X vers le haut
+    # axis.title.x = element_blank(),  # Supprimer le titre de l'axe X
+    axis.title.y = element_blank(),  # Supprimer le titre de l'axe Y
+    legend.position = "bottom",  # Légende en dessous
+    legend.title = element_blank(),  # Supprimer le titre de la légende
+    panel.grid.major.x = element_blank(), 
+    panel.grid.major.y = element_blank(),  # Pas de grille horizontale
+    panel.grid.minor = element_blank(),  # Pas de grille secondaire
+    plot.margin = margin(0, 0, 0, 0)  # Réduire les marges autour du graphique
+  )
+
+}
+
+# pwet
+if(length(new_data_3)>0){
+  dat_list_3 <- list(new_data_3)
+  
+  dat_list_3 = dat_list_3[[1]][[1]]
+  diff_cancer=dat_list_3$`Différence (%)\n2025-2024`[1]
+  dat_list_3 = around_df(dat_list_3)
+  dat_list_3 = mettre_un_plus_df(dat_list_3)
+  dat_list_3 = dat_list_3 %>%
+    theme_table( affiche_Nb. = F) %>%
+    line_spacing(space = 1, part = "body")
+}
+
+if(length(new_data_4)>0){
+  dat_list_4 <- list(new_data_4)
+  
+  dat_list_4 = dat_list_4[[1]][[1]]
+  dat_list_4 = around_df(dat_list_4, IP_DMS=T)
+  dat_list_4 = mettre_un_plus_df(dat_list_4)
+    
+  dat_list_4 = dat_list_4 %>%
+    theme_table( affiche_Nb. = F) 
+    # line_spacing(space = 1, part = "body")
+
+}
+
+if(length(new_data_5)>0){
+dat_list_5 <- list(new_data_5)
+
+dat_list_5 = dat_list_5[[1]][[1]]
+dat_list_5 = around_df(dat_list_5)
+dat_list_5 = mettre_un_plus_df(dat_list_5)
+  
+dat_list_5 = dat_list_5 %>%
+  theme_table( affiche_Nb. = F) 
+  # line_spacing(space = 1, part = "body")
+}
+# pwet
+if(my_data_6 %>% length > 0){
+  if(etablissement %in% c("CHEB","CHICAS","GHT")){
+    dat_list_6 <- list(data_six)
+    diff_chimio = dat_list_6[[1]]$`Différence (%)\n2025-2024`[1]
+    # pwet
+    dat_list_6 = around_df(dat_list_6[[1]])
+    dat_list_6 = mettre_un_plus_df(dat_list_6)
+    dat_list_6 = dat_list_6 %>%
+      theme_table( affiche_Nb. = F) %>%
+      line_spacing(space = 1, part = "body")
+  }
+}
+
+if(length(new_data_7)>0){
+  if(etablissement == "CHE"){
+    new_data_70=c()
+    tableau_1=head(new_data_7[[1]],5)
+    tableau_2=tail(new_data_7[[1]],dim(new_data_7[[1]])[1]-5)
+    
+    tableau_1 = tableau_1 %>% dplyr::select(-Pôle)
+    
+    tableau_1 = around_df(tableau_1)
+    tableau_1 = mettre_un_plus_df(tableau_1)
+    colnames(tableau_1)[colnames(tableau_1) == "Nb RUM agrégés par UM"] = " "
+    tableau_1= tableau_1 %>%
+      theme_table( affiche_Nb. = F) 
+    
+    tableau_2 = tableau_2 %>% dplyr::select(-Pôle)
+    
+    tableau_2 = around_df(tableau_2)
+    tableau_2 = mettre_un_plus_df(tableau_2)
+    colnames(tableau_2)[colnames(tableau_2) == "Nb RUM agrégés par UM"] = " "
+    tableau_2= tableau_2 %>%
+      theme_table( affiche_Nb. = F) 
+    
+  }
+  # pwet
+  if(etablissement == "CHEB"){
+    # pwetpwet
+    new_data_70=c()
+    new_data_7[[1]]$`Pôle` <- zoo::na.locf(new_data_7[[1]]$`Pôle`)
+    new_data_7a[[1]]$`Pôle` <- zoo::na.locf(new_data_7a[[1]]$`Pôle`)
+    new_data_7b[[1]]$`Pôle` <- zoo::na.locf(new_data_7b[[1]]$`Pôle`)
+    tableau_1_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "CHIRURGIE")
+    
+    tableau_2_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "MEDECINE")
+    tableau_2_Ta=new_data_7a[[1]] %>% 
+      filter(`Pôle` == "MEDECINE")
+    tableau_2_Tb=new_data_7b[[1]] %>% 
+      filter(`Pôle` == "MEDECINE")
+    tableau_2_Ta$`Unité Médicale` <- NA  # Crée la colonne avec des NA
+    tableau_2_Ta$`Unité Médicale`[1] <- "Hôpital de Jour"  # Modifie uniquement la première ligne
+    tableau_2_Tb$`Unité Médicale` <- NA  # Crée la colonne avec des NA
+    tableau_2_Tb$`Unité Médicale`[1] <- "Médecine"  # Modifie uniquement la première ligne
+    tableau_2_Ta = tableau_2_Ta %>% relocate("Pôle","Unité Médicale")
+    tableau_2_Tb = tableau_2_Tb %>% relocate("Pôle","Unité Médicale")
+    tableau_2_Ta = rbind(tableau_2_Tb,tableau_2_Ta)
+    tableau_2_T = rbind(tableau_2_Ta,tableau_2_T)
+    tableau_3_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "FEMMES PARENTS ENFANTS")
+    tableau_4_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "URGENCES - REANIMATION")
+    
+    
+    tableau_1_T = tableau_1_T %>% dplyr::select(-Pôle)
+    tableau_2_T = tableau_2_T %>% dplyr::select(-Pôle)
+    tableau_3_T = tableau_3_T %>% dplyr::select(-Pôle)
+    tableau_4_T = tableau_4_T %>% dplyr::select(-Pôle)
+    
+    tableau_1_T = around_df(tableau_1_T)
+    tableau_1_T = mettre_un_plus_df(tableau_1_T)
+    colnames(tableau_1_T)[colnames(tableau_1_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_1_T= tableau_1_T %>%
+      theme_table( affiche_Nb. = F) 
+    
+    tableau_2_T = around_df(tableau_2_T)
+    tableau_2_T = mettre_un_plus_df(tableau_2_T)
+    colnames(tableau_2_T)[colnames(tableau_2_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_2_T= tableau_2_T %>%
+      theme_table( affiche_Nb. = F) 
+    
+    tableau_3_T = around_df(tableau_3_T)
+    tableau_3_T = mettre_un_plus_df(tableau_3_T)
+    colnames(tableau_3_T)[colnames(tableau_3_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_3_T= tableau_3_T %>%
+      theme_table( affiche_Nb. = F)
+    
+    tableau_4_T = around_df(tableau_4_T)
+    tableau_4_T = mettre_un_plus_df(tableau_4_T)
+    colnames(tableau_4_T)[colnames(tableau_4_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_4_T= tableau_4_T %>%
+      theme_table( affiche_Nb. = F)
+  }
+  
+  if(etablissement %in% c("CHICAS","GHT")){
+    new_data_70=c()
+    new_data_70=c()
+    new_data_7[[1]]$`Pôle` <- zoo::na.locf(new_data_7[[1]]$`Pôle`)
+    new_data_7[[1]]$`Différence (%)\n2025-2024`[new_data_7[[1]]$`Différence (%)\n2025-2024` == "Inf"] = ""
+    # pwet
+    tableau_1_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "POLE CHIRURGIE REANIMATION")
+    tableau_2_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "POLE FEMME ENFANT")
+    tableau_3_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "POLE GERONTOLOGIE")
+    tableau_4_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "POLE MEDICAL")
+    tableau_5_T=new_data_7[[1]] %>% 
+      filter(`Pôle` == "POLE SOINS CRITIQUES")
+    
+    
+    tableau_1_T = tableau_1_T %>% dplyr::select(-Pôle)
+    tableau_2_T = tableau_2_T %>% dplyr::select(-Pôle)
+    tableau_3_T = tableau_3_T %>% dplyr::select(-Pôle)
+    tableau_4_T = tableau_4_T %>% dplyr::select(-Pôle)
+    tableau_5_T = tableau_5_T %>% dplyr::select(-Pôle)
+    
+    
+    tableau_1_T = around_df(tableau_1_T)
+    tableau_1_T = mettre_un_plus_df(tableau_1_T)
+    colnames(tableau_1_T)[colnames(tableau_1_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_1_T= tableau_1_T %>%
+      theme_table( affiche_Nb. = F) 
+    
+    tableau_2_T = around_df(tableau_2_T)
+    tableau_2_T = mettre_un_plus_df(tableau_2_T)
+    colnames(tableau_2_T)[colnames(tableau_2_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_2_T= tableau_2_T %>%
+      theme_table( affiche_Nb. = F) 
+    
+    tableau_3_T = around_df(tableau_3_T)
+    tableau_3_T = mettre_un_plus_df(tableau_3_T)
+    colnames(tableau_3_T)[colnames(tableau_3_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_3_T= tableau_3_T %>%
+      theme_table( affiche_Nb. = F)
+    
+    tableau_4_T = around_df(tableau_4_T)
+    tableau_4_T = mettre_un_plus_df(tableau_4_T)
+    colnames(tableau_4_T)[colnames(tableau_4_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_4_T= tableau_4_T %>%
+      theme_table( affiche_Nb. = F)
+    
+    tableau_5_T = around_df(tableau_5_T)
+    tableau_5_T = mettre_un_plus_df(tableau_5_T)
+    colnames(tableau_5_T)[colnames(tableau_5_T) == "Nb RUM agrégés par UM"] = " "
+    tableau_5_T= tableau_5_T %>%
+      theme_table( affiche_Nb. = F)
+  }
+  
+  # if(length(new_data_8)>0){
+  #   if(etablissement %in% c("CHEB","CHICAS","GHT")){
+  #     dat_list_8 <- list(new_data_8)
+  #     
+  #     dat_list_8 = dat_list_8[[1]][[1]]
+  #     dat_list_8 = around_df(dat_list_8)
+  #       
+  #     dat_list_8 = dat_list_8 %>%
+  #       theme_table( affiche_Nb. = F) 
+  #     }
+  # }
+  # pwet
+  if(length(new_data_9)>0){
+    if(etablissement %in% c("CHEB","CHICAS","GHT")){
+      dat_list_9 <- list(new_data_9)
+
+      dat_list_9 = dat_list_9[[1]][[1]]
+      colnames(dat_list_9)[colnames(dat_list_9) == "UM"]= "Unité Médicale"
+      
+      if(etablissement %in% c("CHEB")){
+        dat_list_9 = dat_list_9 %>% 
+          select(-` `)
+        dat_list_9$`Unité Médicale`= "Hopital de Jour de Medecine"
+        dat_list_9 = dat_list_9 %>% 
+          group_by(`Unité Médicale`) %>% 
+          summarise(`2024`=sum(`2024`, na.rm = T),
+                    `2025`=sum(`2025`, na.rm = T)
+                    )
+        dat_list_9 = dat_list_9 %>% 
+          mutate(`Différence (%)\n2025-2024` = (`2025`-`2024`)/`2024`) %>% data.frame
+        colnames(dat_list_9)=c("Unité Médicale","2024","2025","Différence (%)\n2025-2024")
+      }
+      
+      dat_list_9 = around_df(dat_list_9)
+      dat_list_9 = mettre_un_plus_df(dat_list_9)
+      dat_list_9 = dat_list_9 %>%
+        theme_table( affiche_Nb. = F)
+    }
+    
+    if(length(new_data_8)>0){
+      dat_list_8 <- list(new_data_8)
+      
+      dat_list_8 = dat_list_8[[1]][[1]]
+      dat_list_8 = around_df(dat_list_8)
+      dat_list_8 = mettre_un_plus_df(dat_list_8)
+      dat_list_8 = dat_list_8 %>%
+        theme_table( affiche_Nb. = F) %>%
+        line_spacing(space = 1, part = "body")
+    }
+      
+  }
+  # pwet
+  if(etablissement == "CHICAS"){
+  
+    new_data_10_1 = new_data_10_1
+    evo_file_act_HAD = new_data_10_1$`Différence (%)\n2025-2024`[1]
+    evo_nb_sej_HAD = new_data_10_1$`Différence (%)\n2025-2024`[2]
+    evo_nb_seq_HAD = new_data_10_1$`Différence (%)\n2025-2024`[3]
+    evo_nb_j_HAD = new_data_10_1$`Différence (%)\n2025-2024`[5]
+    
+    chiffre_valo_had= new_data_10_1$`2025`[8]-new_data_10_1$`2024`[8]
+    taux_valo_had = new_data_10_1$`Différence (%)\n2025-2024`[8]
+    new_data_10_1 = around_df(new_data_10_1)
+    new_data_10_1 = mettre_un_plus_df(new_data_10_1)
+    new_data_10_1 = new_data_10_1 %>%
+        theme_table( affiche_Nb. = F)
+    
+    new_data_10_2 = new_data_10_2
+    new_data_10_2 = around_df(new_data_10_2)
+    new_data_10_2 = mettre_un_plus_df(new_data_10_2)
+    new_data_10_2 = new_data_10_2 %>%
+        theme_table( affiche_Nb. = F)
+    
+    new_data_10_3 = new_data_10_3
+    new_data_10_3 = around_df(new_data_10_3)
+    new_data_10_3 = mettre_un_plus_df(new_data_10_3)
+    new_data_10_3 = new_data_10_3 %>%
+        theme_table( affiche_Nb. = F)
+
+    new_data_10_4 = new_data_10_4
+    new_data_10_4 = around_df(new_data_10_4)
+    new_data_10_4 = mettre_un_plus_df(new_data_10_4)
+    new_data_10_4 = new_data_10_4 %>%
+        theme_table( affiche_Nb. = F)
+
+    new_data_10_5 = new_data_10_5
+    new_data_10_5 = around_df(new_data_10_5)
+    new_data_10_5 = mettre_un_plus_df(new_data_10_5)
+    new_data_10_5 = new_data_10_5 %>%
+        theme_table( affiche_Nb. = F)
+
+
+  }
+  
+  if(etablissement %in% c("CHE","CHICAS")){
+      dat_list_11 <- list(new_data_11)
+      
+      dat_list_11[[1]][[1]] = dat_list_11[[1]][[1]]
+      dat_list_11[[1]][[1]] = around_df(dat_list_11[[1]][[1]])
+      dat_list_11[[1]][[1]] = mettre_un_plus_df(dat_list_11[[1]][[1]])
+      dat_list_11[[1]][[1]] = dat_list_11[[1]][[1]] %>%
+        theme_table( affiche_Nb. = F)
+      
+      dat_list_11[[1]][[2]] = dat_list_11[[1]][[2]]
+      dat_list_11[[1]][[2]] = around_df(dat_list_11[[1]][[2]])
+      dat_list_11[[1]][[2]] = mettre_un_plus_df(dat_list_11[[1]][[2]])
+      dat_list_11[[1]][[2]] = dat_list_11[[1]][[2]] %>%
+        theme_table( affiche_Nb. = F)
+  }
+  
+  if(etablissement == "CHEB"){
+    dat_list_12 <- list(new_data_12)
+    
+    diff_jour_psy = dat_list_12[[1]][[1]]$`Différence (%)\n2025-2024`[1]
+    diff_ambu_psy = dat_list_12[[1]][[2]]$`Différence (%)\n2025-2024`[1]
+    diff_stab_psy = dat_list_12[[1]][[2]]$`Différence (%)\n2025-2024`[2]
+    diff_j_dfa = dat_list_12[[1]][[3]]$`Différence (%)\n2025-2024`[1]
+    for (j in seq_along(dat_list_12[[1]])) {
+    dat_list_12[[1]][[j]] = around_df(dat_list_12[[1]][[j]], IP_DMS=T)
+      dat_list_12[[1]][[j]] = mettre_un_plus_df(dat_list_12[[1]][[j]])
+      # dat_list[[1]][[j]] = tab_to_string(dat_list[[1]][[j]])
+      
+      dat_list_12[[1]][[j]] = dat_list_12[[1]][[j]] %>%
+        theme_table( affiche_Nb. = F) %>%
+        line_spacing(space = 1, part = "body")
+      dat_list_12[[1]][[j]]=dat_list_12[[1]][[j]] %>% 
+            width(j = c(1,2,3,4),
+              width = c(1,1,3.5,3.5))
+    }
+    
+    dat_list_16 <- list(new_data_16)
+    
+    for (j in seq_along(dat_list_16[[1]])) {
+    dat_list_16[[1]][[j]] = around_df(dat_list_16[[1]][[j]])
+      dat_list_16[[1]][[j]] = mettre_un_plus_df(dat_list_16[[1]][[j]])
+      # dat_list[[1]][[j]] = tab_to_string(dat_list[[1]][[j]])
+      
+      dat_list_16[[1]][[j]] = dat_list_16[[1]][[j]] %>%
+        theme_table( affiche_Nb. = F) %>%
+        line_spacing(space = 1, part = "body")
+      dat_list_16[[1]][[j]]=dat_list_16[[1]][[j]] %>% 
+            width(j = c(1,2,3,4),
+              width = c(1,1,3.5,3.5))
+    }
+  }
+  
+  
+  
+  
+}
+
+graphique <- list(graphique)
+
+```
+
+\newpage
+
+# Sommaire
+
+```{r }
+table_of_contents<-fpar(ftext("",
+                              prop= fp_text(font.size = 8,
+                                            font.family = "Verdana",
+                                            bold=TRUE)))
+table_of_contents
+cat("")
+block_toc()
+```
+
+```{r pressure_2, echo=FALSE, fig.height=8.4, fig.width=7}
+################################################################################
+# Importation de la photo visible à la première page de couverture du document #
+################################################################################
+# knitr::include_graphics(paste0("Images/fond_sommaire_",etabb,".png"))
+```
+
+<!-- # Liste des tables -->
+
+```{r }
+# Mettre eval=FALSE si vous ne souhaitez pas l'afficher
+# table_of_tables<-fpar(ftext("Liste des tables",
+#                               prop= fp_text(font.size = 9,
+#                                             font.family = "Verdana",
+#                                             bold=TRUE)))
+# table_of_tables
+# cat("")
+# block_toc(style = "rTableLegend")
+```
+
+\newpage
+
+```{r}
+
+```
+
+<!-- # Historique des versions -->
+
+```{r historique}
+#historique des versions
+# historique_version = as.data.frame(historique_version)
+# colnames(historique_version)=c("Version", "Date de validation", "Nature des modifications","Auteur")
+# 
+date = Sys.Date()
+date = paste0(substr(date,9,10),"/",substr(date,6,7),"/",substr(date,1,4))
+# historique_version$`Date de validation`=date
+# historique_version$`Auteur`=auteur
+# 
+# historique<-historique_version %>%
+#   flextable() %>%
+#   flextable::bold(part="header") %>%
+#   fontsize(size = 9) %>%
+#   line_spacing(space = 1, part = "body") %>%
+#   width(j = c(1,2,3,4),
+#         width = c(1,1,3.5,1.2)) %>%
+#   border_remove()
+# 
+# historique
+# 
+# cat("\\newpage")
+
+```
+
+
+# Médecine/Chirurgie/Obstétrique
+
+```{r, fig.height=8, fig.width=7}
+if(etablissement %in% c("CHEB","CHICAS","GHT")){
+  cat(paste0("  \n## Graphique - Nombre de séjours MCO/séances  \n"))
+  res
+}
+```
+
+```{r, fig.height=9, fig.width=7}
+cat(paste0("  \n## Graphique - Détails du nombre de séjours MCO  \n"))
+res_2
+```
+
+
+
+
+```{r page break, echo=F, message=F}
+
+
+if(etablissement %in% c("CHICAS","CHEB","GHT")){
+  
+  
+  for (j in seq_along(dat_list[[1]])) {
+      # if(!dat_list[[2]][j][[1]] %in% ensemble_table){
+        cat(paste0("  \n## ",reponse_1[j],"  \n"))
+        # cat(paste0("<div custom-style='rTableLegend'>","",dat_list[[2]][j],"  \n\n","</div><br><br>"))
+        cat(knitr::knit_print(dat_list[[1]][[j]]))
+        cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        cat("\n")
+        # include_graphics("Images/footnote.png")
+        cat(paste0("![](Images/footnote.png)"), "\n")
+        cat(paste0("<div custom-style='page-break-before: always;'></div>"))
+        
+        
+        if(j != max(seq_along(dat_list[[1]]))){
+          cat("\n")
+          cat("\\newpage")
+          cat("\n")
+        }
+  }
+}
+
+```
+
+```{r patyate}
+# pwet
+if(length(my_data_2)>0){
+  if(etablissement %in% c("CHEB","CHICAS","GHT")){
+    
+    cat("\n")
+    cat("\\newpage")
+    
+    cat(paste0("  \n## Indicateurs spécifiques  \n"))
+  
+
+      cat(paste0("  \n### Urgences  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(data_urgences))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+      cat("\n")
+  cat(paste0("  \n### Chirurgie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(data_chirurgie))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+      cat("\n")
+    cat(paste0("  \n### Obstétrique  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(data_obstétrique))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  
+    cat("\n")
+      
+    cat(paste0("  \n### Oncologie  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_3))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+    cat("\n")
+      
+    cat(paste0("  \n### Séances de chimiothérapie  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_6))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+    cat("\n")
+    cat(paste0("  \n### HDJ Hors séances  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_9))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+    cat("\n")
+    
+    cat(paste0("  \n### Séances de dialyse  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_8))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+    cat("\n")
+    
+    cat(paste0("  \n### Soins Palliatifs Z515  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_4))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+    
+    # if(etablissement == "CHICAS"){
+    #   cat("\n")
+    #   cat(paste0("  \n### Démographie  \n"))
+    #   # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    #   cat(knitr::knit_print(dat_list_13))
+    #   cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    # }
+    if(etablissement == "CHICAS"){
+      cat("\n")
+      cat(paste0("  \n### Consommables  \n"))
+      # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+      cat(knitr::knit_print(dat_list_14))
+      cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+      
+      cat("\n")
+    }
+
+    
+  }
+}
+# pwet
+if(etablissement == "CHE"){
+
+  cat(paste0("  \n## Détail Activité des Résumés d'Unités Médicales RUM  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  cat("\n")
+  # include_graphics("Images/footnote.png")
+  cat(paste0("![](Images/footnote.png)"), "\n")
+  cat(paste0("<div custom-style='page-break-before: always;'></div>"))
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  
+  cat(paste0("  \n## Indicateurs spécifiques  \n"))
+
+  cat("\n")
+  cat(paste0("  \n### Urgences  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_2))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+  # cat(paste0("  \n### Chirurgie  \n"))
+  # # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  # cat(knitr::knit_print(data_chirurgie))
+  # cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  # 
+  #   cat(paste0("  \n### Obstétrique  \n"))
+  # # cat(paste0("<div custom-style='rTableLegend'>" , "Indicateurs spécifiques", "\n\n","</div><br><br>"))
+  # cat(knitr::knit_print(data_obstétrique))
+  # cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Oncologie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_3))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Soins Palliatifs  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_4))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+
+
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Démographie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_5))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  #   cat("\\newpage")
+  # cat("\n")
+  # cat(paste0("  \n### Consommables  \n"))
+  # # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  # cat(knitr::knit_print(dat_list_13))
+  # cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  # cat("\\newpage")
+  # cat("\n")
+  # cat(paste0("  \n## Consommables CHEB (MO et DMI)  \n"))
+  # # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  # cat(knitr::knit_print(dat_list_6))
+  # cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n## Activité par pôle  \n"))
+  cat(paste0("  \n### Gériatrie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_1))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Polyvalent  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_2))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+   
+
+    
+}
+# pwet
+if(etablissement == "CHEB"){
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat("\n")
+  
+  cat(paste0("  \n## Activité par pôle  \n"))
+  cat(paste0("  \n### Chirurgie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_1_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Médecine  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_2_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Femmes Parents Enfants  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_3_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Urgences, réanimation  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_4_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+}
+
+    
+# pwet
+if(etablissement %in% c("CHICAS")){
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  
+  cat(paste0("  \n## Activité par pôle  \n"))
+  cat(paste0("  \n### Femme Enfant \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_2_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Chirurgie & Réanimation  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_1_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Médical  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_4_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Gérontologie  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_3_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n### Soins critiques  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(tableau_5_T))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n# Hospitalisation à Domicile - HAD  \n"))
+  cat(paste0("  \n## Chiffres clés \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  # new_data_10_1
+  cat(knitr::knit_print(new_data_10_1))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  cat("\n")
+  cat(paste0("  \n## Nature de la prise en charge  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(new_data_10_2))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+      
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n## Indice de Karnofsky  \n"))
+
+}
+
+```
+
+
+
+
+```{r, echo=FALSE, fig.height=5, fig.width=5.5}
+if(etablissement %in% c("CHICAS")){
+  knitr::knit_print(graph_long_karnofsky)
+}
+```
+
+
+```{r}
+
+if(etablissement %in% c("CHICAS")){
+  cat("\n")
+  cat(paste0("  \n## Lieu de prise en charge  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(new_data_10_3))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n## Mode de Prise en charge Principal  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(new_data_10_4))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n## Mode de Prise en charge Associé  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(new_data_10_5))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  
+  
+}
+
+if (etablissement %in% c("CHE","CHICAS")){
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  
+  cat(paste0("  \n# Soins Médicaux et de Réadaptation - SMR  \n"))
+  cat(paste0("  \n## Chiffres Clés  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_11[[1]][[1]]))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+  
+  
+  cat("\n")
+  cat("\n")
+  cat("\\newpage")
+  cat("\n")
+  cat(paste0("  \n## Sévérités, actes et cotations  \n"))
+  # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+  cat(knitr::knit_print(dat_list_11[[1]][[2]]))
+  cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+}
+
+    # pwet
+    if(etablissement %in% c("CHEB")){
+    
+    cat("\n")
+    cat("\\newpage")
+    cat("\n")
+    cat(paste0("  \n# ","Psychiatrie","  \n"))
+        
+    cat(paste0("  \n## Hospitalisation complète et Partielle  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    
+    # dat_list_12[[1]][[1]]
+    cat(knitr::knit_print(dat_list_12[[1]][[1]] ))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    cat("\n")
+    cat("\n")
+    # cat(paste0("![](Images/definition_psy.png)"), "\n")
+    # cat(paste0("<div custom-style='page-break-before: always;'></div>"))  
+    
+    cat(paste0("  \n## Ambulatoire  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_12[[1]][[2]]))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    cat("\n")
+    cat("\n")
+    # cat(paste0("![](Images/definition_psy.png)"), "\n")
+    # cat(paste0("<div custom-style='page-break-before: always;'></div>")) 
+  
+    
+    cat("\n")
+    cat("\n")
+    cat("\\newpage")
+    cat("\n")
+    cat(paste0("  \n## Dotation à la File Active  \n"))
+    cat("\n")
+    cat(paste0("![](Images/intro_psy.png)"), "\n")
+    cat(paste0("<div custom-style='page-break-before: always;'></div>"))
+    cat("\\newpage")
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_12[[1]][[3]]))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    cat("\n")
+    cat("\n")
+    cat(paste0("![](Images/definition_psy.png)"), "\n")
+    cat(paste0("<div custom-style='page-break-before: always;'></div>")) 
+  
+    cat("\n")
+    cat("\n")
+    cat("\\newpage")
+    cat("\n")
+
+    cat(paste0("  \n## Ambulatoire par lieux d'acte  \n"))
+    # cat(paste0("<div custom-style='rTableLegend'>" , "Soins palliatifs", "\n\n","</div><br><br>"))
+    cat(knitr::knit_print(dat_list_16[[1]][[1]]))
+    cat(knitr::knit_print(commentaires(paste0("Module BI QUERY, ",etablissement," - Exécuté le ",date))))
+    cat("\n")
+    cat("\n")
+    
+    
+}
+
+cat("\n")
+cat("\n")
+cat("\\newpage")
+cat("\n")
+```
+
+
+# Annexe
+
+```{r}
+
+
+
+cat(HTML("**MCO :** Médecine Chirurgie Obstétrique.
+
+  
+
+**Séjour :** Venue en hospitalisation d’un patient dans un établissement de santé.  
+
+
+**Séance :** Venue en hospitalisation d’un patient dans un établissement de santé impliquant un traitement avec venues itératives (Ex : Epuration extrarénale, chimiothérapie, radiothérapie, transfusion sanguine, oxygénothérapie hyperbare, aphérèse sanguine).  
+
+
+**File active :** Nombre de patients uniques vus au moins une fois dans l’année.  
+
+
+**Journées PMSI :** Nombre de nuitées (Une venue sans nuitée est égale à 0 jour).  
+
+
+**Journées brutes :** Nombre de journées (Une venue sans nuitée est égale à 1 jour).  
+
+**Taux de chirurgie ambulatoire :** Rapport entre le nombre de séjours en chirurgie de 0 jour divisé par le nombre de séjours en chirurgie. Un séjour est répertorié en chirurgie par les critères suivants : CAS = M ou racines de GHM = 03k02, 05k14, 11k07, 12k06, 09z02, 23z03, 14z08. Hors CMD 14 et 15.
+
+
+**Taux de médecine ambulatoire :** Pourcentage de séjours en ambulatoire sur le nombre total de séjours de médecine. Un séjour est répertorié en chirurgie par les critères suivants : ASO = M.
+
+
+**Valorisation 100% T2A :** Valorisation Brute sans prise en compte des coefficients ni des taux de prise en charge des patients.  
+
+
+**Durée Moyenne de Séjours (DMS) :** Rapport du nombre de journées PMSI sur le total des séjours.  
+
+
+**Taux de passage aux urgences :** Nombre de séjours avec un passage aux urgences sur le total des séjours (hors séances).  
+
+
+**UHCD :** Unité d’Hospitalisation de Courte Durée  
+
+
+**Patients pris en charge pour cancer (Algorithme INCA) :** Nombre de patients identifiés par l’algorithme PMSI de l’INCA.  
+
+
+**Chimiothérapies pour cancer :** Traitement par médicament pour soigner les cancers (Chimiothérapie au sens PMSI comprend tous médicaments utilisés dans le traitement du cancer notamment les immunothérapies).  
+
+
+**Chimiothérapies autres que cancer :** Traitement par médicament pour soigner d’autres pathologies autres que le cancer (Chimiothérapie au sens PMSI comprend tous médicaments utilisés notamment les immunothérapies).  "))
+```
+
+
+```{r}
+liste_email = read.csv2("DestinataireMailPilotage.csv")
+
+# Create an Outlook object, a new email, and set the parameters.
+Outlook <- RDCOMClient::COMCreate("Outlook.Application")
+Email <- Outlook$CreateItem(0)
+
+liste_email_1 = head(liste_email, 50)
+
+Email[["To"]] <- liste_email_1$Destinataire
+
+mois_en_cours <- as.numeric(format(Sys.Date(), "%m"))
+mois_ajuste <- mois_en_cours - 2
+
+if(mois_en_cours >10){
+  if(mois_ajuste == 1){
+    mois_ajuste = 11
+  }
+  if(mois_ajuste == 2){
+    mois_ajuste = 12
+  }
+}
+if(length(mois_ajuste)==1){
+  mois_ajuste = paste0("0",mois_ajuste)
+}
+mois_fr <- c("janvier", "février", "mars", "avril", "mai", "juin",
+             "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+mois_nom <- mois_fr[as.numeric(mois_ajuste)]
+objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
+
+Email[["subject"]] <- objet
+
+# Récupère le chemin vers le dossier contenant les signatures Outlook
+# signature_dir <- file.path(Sys.getenv("APPDATA"), "Microsoft", "Signatures")
+# 
+# # Liste les fichiers .htm (ce sont ceux utilisés dans les mails HTML)
+# signature_file <- list.files(signature_dir, pattern = "\\.htm$", full.names = TRUE)
+# 
+# signature_html <- readLines(signature_file[2], warn = FALSE, encoding = "UTF-8")
+# signature_html <- paste(signature_html, collapse = "\n")
+
+format_pourcentage <- function(x) {
+  signe <- if (x > 0) "+" else if (x < 0) "−" else ""
+  x_formate <- sprintf("%.1f", abs(x))
+  x_formate <- gsub("\\.", ",", x_formate)  # Remplace . par ,
+  return(paste0("(", signe, x_formate, "%)"))
+}
+
+texte_file_active <- function(x) {
+  x=as.numeric(x)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  pourcentage <- safe_format(x)
+  return(paste0("<li>Une <strong>file active</strong> en ", tendance, " ", pourcentage, "</li>"))
+}
+
+texte_evolution <- function(x) {
+  x=as.numeric(x)
+  tendance <- if (x >= 0) "positive 📈" else "négative 📉"
+  pourcentage <- safe_format(x)
+  return(paste0("<li>Une <strong>activité</strong> en évolution ", tendance, " ", pourcentage, "</li>"))
+}
+
+texte_evolution_cheb_chicas <- function(x,y) {
+  x=as.numeric(x)
+  tendance <- if (x >= 0) "augmentation" else "baisse"
+  pourcentage_x <- safe_format(x)
+  pourcentage_y <- safe_format(y)
+  return(paste0("<li>Une <strong>activité</strong> en ", tendance, " : ", pourcentage_x, " au global, ",pourcentage_y," sur les séances</li>"))
+} 
+
+texte_nb_sejours <- function(x) {
+  x=as.numeric(x)
+  # tendance <- if (x >= 0) "positive" else "négative"
+  pourcentage <- safe_format(x)
+  return(paste0("<li>Portée par les <strong>séjours courts</strong> ", pourcentage, "</li>"))
+}
+
+
+
+texte_nb_uhcd <- function(x) {
+  x=as.numeric(x)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  pourcentage <- safe_format(x)
+  return(paste0("<li>Un <strong>nb. d'UHCD</strong> en ", tendance, " ", pourcentage, "</li>"))
+}
+
+format_perc <- function(x) {
+  signe <- if (x > 0) "+" else if (x < 0) "−" else ""
+  x_formate <- sprintf("%.1f", abs(x))
+  x_formate <- gsub("\\.", ",", x_formate)  # Remplace . par ,
+  return(paste0(signe, x_formate, "%"))
+}
+
+fct_taux_urgences <- function(x,y) {
+  x=as.numeric(x)
+  y=as.numeric(y)
+  # tendance <- if (x >= 0) "hausse" else "baisse"
+  taux_passage <- format_perc(x)
+  diff_taux_passage <- format_perc(y)
+  return(paste0("<li>",taux_passage," des séjours avec <strong>un passage par les urgences</strong> (", diff_taux_passage, ")</li>"))
+}
+
+fct_dms <- function(x,y) {
+  x=as.numeric(x)
+  tendance <- if (y >= 0) "hausse 📈" else "baisse 📉"
+  dms_taux <- safe_format(y)
+  return(paste0("<li>Une  <strong>DMS</strong> en ", tendance, " : ", dms_chiffre, " ", dms_taux,"</li>"))
+}
+
+fct_valo <- function(x, y) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  x <- round(x, 0)
+  
+  # Ajout du signe + ou - selon le sens de y
+  signe <- if (y >= 0) "+" else "−"
+  x_formate <- format(x, big.mark = " ", scientific = FALSE)
+  x_formate <- paste0(signe, x_formate)
+
+  tendance <- if (y >= 0) "hausse 📈" else "baisse 📉"
+  valo_taux <- safe_format(y)  # y est maintenant sûr d’être numérique
+
+  return(paste0("<li>Une ",tendance," de la <strong>valorisation T2A</strong> de ", x_formate, "€ ", " en ", valo_taux, "</li>"))
+}
+
+
+
+fct_tmp <- function(x, y, z) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  z <- as.numeric(z)
+  x=round(x,0)
+  y=round(y,0)
+  x_formate <- paste0(format(x, big.mark = " ", scientific = FALSE)," €")
+  y_formate <- paste0(format(y, big.mark = " ", scientific = FALSE)," €")
+  tendance <- if (z >= 0) "hausse 📈" else "baisse 📉"
+  
+  valo_tms <- safe_format(z)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li>Un <strong>tarif moyen par séjour</strong> en ", tendance, " : ", x_formate , " ",valo_tms,", contre ",y_formate , ".", "</li>"))
+}
+
+
+fct_pro <- function(x, y, z) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  z <- as.numeric(z)
+  x=round(x,0)
+  y=round(y,0)
+  tendance <- if (z >= 0) "hausse 📈" else "baisse 📉"
+  
+  diff_prothese <- safe_format(z)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li>Un <strong>nb. de prothèses (PTH, PTG et PUC)</strong> en ", tendance, " : ",x," ", diff_prothese , ", contre ",y , "</li>"))
+}
+
+fct_smr <- function(x) {
+  x <- as.numeric(x)
+  
+  tendance <- if (x >= 0) "hausse 📈" else "repli 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li> Une <strong>file active</strong> en ",tendance," ", x,"</li>"))
+}
+
+safe_format <- function(val) {
+  if (is.na(val)) {
+    "(NA)"
+  } else {
+    format_pourcentage(val)
+  }
+}
+
+fct_smr_2 <- function(x, y, z, w) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  z <- as.numeric(z)
+  w <- as.numeric(w)
+  tendance <- if (x >= 0) "Hausse 📈" else "Baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  y <- safe_format(y)  # y est maintenant sûr d’être numérique
+  
+  z <- safe_format(z)  # y est maintenant sûr d’être numérique
+  w <- safe_format(w)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li>",tendance," d'activité : <strong>nb. de séjours</strong> ", x, ", <strong>nb. de semaines</strong> ", y, ", <strong>nb. de journées en HC </strong>",z,", <strong>nb. de journées en HP </strong>",w,"</li>"))
+}
+
+fct_had_2 <- function(x, y, z) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  z <- as.numeric(z)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  y <- safe_format(y)  # y est maintenant sûr d’être numérique
+  
+  z <- safe_format(z)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li> Une activité en ",tendance," : <strong>nb. de séjours</strong> ", x, ", <strong>nb. de séquences</strong> ", y, ", <strong>nb. de journées </strong>",z,"</li>"))
+}
+
+    
+fct_csarr <- function(x, y) {
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  
+  tendance <- if (x >= 0) "Hausse 📈" else "Baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  
+  return(paste0("<li>Codage stabilisé : <strong>RHS sévérité 2</strong> ", x, ", ",csarr,"<strong> actes CSARR/séjour</strong></li>"))
+}
+  
+fct_chir_ambu = function(x,y){
+  x <- as.numeric(x)
+  y <- as.numeric(y)
+  tendance <- if (y >= 0) "augmentation" else "baisse"
+  y <- safe_format(y)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Un <strong>taux de chirurgie ambulatoire</strong> de ",x,"% en ", tendance, " ",y,"</li>"))
+}
+
+fct_naissance = function(diff_naissance, diff_avb, diff_cesarienne) {
+  diff_naissance <- as.numeric(diff_naissance)
+  diff_avb <- as.numeric(diff_avb)
+  diff_cesarienne <- as.numeric(diff_cesarienne)
+  
+  tendance <- if (diff_naissance >= 0) "hausse 📈" else "baisse 📉"
+  
+  signe_avb <- if (diff_avb > 0) "+" else ""
+  signe_cesarienne <- if (diff_cesarienne > 0) "+" else ""
+  
+  avb_label <- if (abs(diff_avb) > 1) "AVB" else "AVB"
+  cesarienne_label <- if (abs(diff_cesarienne) > 1) "césariennes" else "césarienne"
+  
+  return(paste0(
+    "<li>Un <strong>nb. de naissances</strong> en ", tendance,
+    " (", signe_avb, diff_avb, " ", avb_label, ", ",
+    signe_cesarienne, diff_cesarienne, " ", cesarienne_label, ")</li>"
+  ))
+}
+
+
+    
+fct_dms_cheb <- function(val_annee_en_cours, val_annee_prec) {
+  # Conversion
+  val_annee_en_cours <- round(as.numeric(val_annee_en_cours),0)
+  val_annee_prec <- as.numeric(val_annee_prec)
+  
+  # Calcul de l'évolution en pourcentage
+  evol <- (val_annee_en_cours - val_annee_prec) / val_annee_prec
+  
+  # Déterminer la tendance
+  tendance <- if (abs(evol) < 0.5) {
+    "constante"
+  } else if (evol > 0) {
+    "en augmentation"
+  } else {
+    "en diminution"
+  }
+  
+  # Format de l'évolution en %
+  evol_txt <- paste0("(", format(round(100 * abs(evol), 1), big.mark = " "), " %)")
+  
+  # Phrase finale
+  return(paste0("<li>Une <strong>DMS</strong> ", tendance, " ", val_annee_en_cours, "J</li>"))
+}
+
+fct_cancer = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "augmentation" else "diminution"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une file active de patients pris en charge pour <strong>cancer</strong> en ", tendance, " ",x,"</li>"))
+}
+
+fct_diff_jour_psy = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "augmentation" else "diminution"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une file active en ", tendance, " sur <strong> l'hospitalisation complète et partielle </strong>",x,"</li>"))
+}
+
+
+    # diff_ambu_psy = dat_list_12[[1]][[2]]$`Différence (%)\n2025-2024`[1]
+    # diff_stab_psy = dat_list_12[[1]][[2]]$`Différence (%)\n2025-2024`[2]
+    
+fct_ambu_psy = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "augmentation" else "diminution"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une ", tendance, " de la file active en <strong> ambulatoire </strong>",x,"</li>"))
+}
+# 
+# 
+fct_stab_psy = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "augmentation" else "diminution"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une ", tendance, " du <strong>nb. d'actes réalisés en ambulatoire </strong>",x,"</li>"))
+}
+
+fct_DFA = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Un <strong>nb. de journées du périmètre DFA</strong> (Dotation à la File Active) en ", tendance, " ",x,"</li>"))
+}
+# diff_chimio
+fct_chimio = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une ",tendance," des séances de <strong>chimiothérapies pour cancer </strong>",x,"</li>"))
+}
+
+fct_HAD = function(x){
+  x <- as.numeric(x)
+  tendance <- if (x >= 0) "hausse 📈" else "baisse 📉"
+  x <- safe_format(x)  # y est maintenant sûr d’être numérique
+  return(paste0("<li>Une <strong>file active</strong> en ", tendance, " ",x,"</li>"))
+}
+
+    # taux_chir_ambu = round(as.numeric(tmp_1$`Différence (%)\n2025-2024`[10]),1)
+    
+dms_chiffre=round(as.numeric(my_data_1_compl_1[[1]]$`2025`),1)
+# Corps du mail au format HTML (avec paragraphes et sauts de ligne)
+# taux_smr_rh2, csarr
+# pwet
+if(etabb == "CHE"){
+  
+  file_active_pt = texte_file_active(file_active_pt)
+  nb_sejours = texte_evolution(nb_sejours)
+  nb_sej_court = texte_nb_sejours(nb_sej_court)
+  nb_uhcd = texte_nb_uhcd(nb_uhcd)
+  texte_taux_urgences = fct_taux_urgences(taux_passage, diff_taux_passage)
+  texte_dms = fct_dms(dms_chiffre, dms_taux)
+  texte_valo = fct_valo(valo_chiffre, valo_taux)
+  text_tms = fct_tmp(tms_chiffre_annee_en_cours, tms_chiffre_annee_prec,tms_taux)
+  text_smr = fct_smr(file_active_smr)
+  texte_smr_2 = fct_smr_2(sej_smr, sem_smr, journee_smr_HC,journee_smr_HP)
+  texte_cssar = fct_csarr(taux_smr_rh2, csarr)
+
+  
+  texte_corps <- paste0(
+    "<html><body>",
+    "<p>Bonjour,</p>",
+    "<p>Veuillez trouver ci-joint le <strong><span style='color: #338fcc;'>rapport de données statistiques</span></strong> pour la période de <strong>janvier à ",mois_nom," 20",sum_graph_new_2025$Année[1],"</strong> concernant le <strong>",etabb,"</strong>.</p>",
+    "<p>Il s’agit des <strong><span style='color: #338fcc;'>données PMSI séjours</span></strong> issues du logiciel <strong>PMSI Pilot</strong>.</p>",
+  
+    "<strong><span style='color: #338fcc;'>Côté MCO</span></strong>, par rapport à l’année précédente :",
+    "<ul>",
+    file_active_pt,
+    nb_sejours,
+    nb_sej_court,
+    nb_uhcd,
+    texte_taux_urgences,
+    texte_dms,
+    texte_valo,
+    text_tms,
+    "</ul>",
+  
+    "<strong><span style='color: #338fcc;'>Côté SMR</span></strong>, par rapport à l’année précédente :",
+    "<ul>",
+    text_smr,
+    texte_smr_2,
+    texte_cssar,
+    "</ul>",
+  
+    "<p>Si malgré toute l’attention portée à ce document vous constatiez des erreurs, merci de nous les signaler.</p>",
+    "<p>L’équipe statistique du <strong>DIMSP</strong> reste à votre disposition pour tout échange ou amélioration du rapport 😊</p>",
+  
+    "<p>Bien à vous,</p>",
+    "<p><em>Emmanuelle<br>Pour l’équipe du DIM du GHT05</em></p>",
+  
+    "<p><strong>PS :</strong> tous nos rapports sont disponibles sur le <em>SharePoint du DIM du GHT</em>.</p>",
+    "</body></html>"
+      # signature_html
+  )
+}else if(etabb == "CHEB"){
+  
+    file_active_pt = texte_file_active(file_active_pt)
+    nb_sejours = texte_evolution_cheb_chicas(nb_sejours, nb_seances)
+    text_chir_ambu = fct_chir_ambu(chiffre_chir_ambu, taux_chir_ambu)
+    text_dms=fct_dms_cheb(dms_chiffre_annee_en_cours,dms_chiffre_annee_prec)
+    texte_valo = fct_valo(valo_chiffre, valo_taux)
+    text_tms = fct_tmp(tms_chiffre_annee_en_cours, tms_chiffre_annee_prec,tms_taux)
+    texte_taux_urgences = fct_taux_urgences(taux_passage, diff_taux_passage)
+    nb_uhcd = texte_nb_uhcd(nb_uhcd)
+    text_cancer = fct_cancer(diff_cancer)
+    text_chimio = fct_chimio(diff_chimio)
+    text_naissance = fct_naissance(diff_naissance, diff_avb, diff_cesarienne)
+    text_hospit_psy = fct_diff_jour_psy(diff_jour_psy)
+    texte_ambu_psy = fct_ambu_psy(diff_ambu_psy)
+    texte_stab_psy = fct_stab_psy(diff_stab_psy)
+    texte_dfa = fct_DFA(diff_j_dfa)
+    text_prot = fct_pro(chiffre_prothese_en_cours, chiffre_prothese_annee_prec, diff_prothese)
+    
+    texte_corps <- paste0(
+    "<html><body>",
+    "<p>Bonjour,</p>",
+    "<p>Veuillez trouver ci-joint le <strong><span style='color: #338fcc;'>rapport de données statistiques</span></strong> pour la période de <strong>janvier à ",mois_nom," 20",sum_graph_new_2025$Année[1],"</strong> concernant le <strong>",etabb,"</strong>.</p>",
+    "<p>Il s’agit des <strong><span style='color: #338fcc;'>données PMSI séjours</span></strong> issues du logiciel <strong>PMSI Pilot</strong>.</p>",
+  
+    "<strong><span style='color: #338fcc;'>Côté MCO</span></strong>, par rapport à l’année précédente :",
+    "<ul>",
+    file_active_pt,
+    nb_sejours,
+    text_chir_ambu,
+    text_dms,
+    texte_valo,
+    text_tms,
+    texte_taux_urgences,
+    nb_uhcd,
+    text_naissance,
+    text_cancer,
+    
+    text_chimio,
+    text_prot,
+    # text_tms,
+    "</ul>",
+  
+    "<strong><span style='color: #338fcc;'>Côté PSY</span></strong>, par rapport à l’année précédente :",
+    "<ul>",
+    text_hospit_psy,
+    texte_ambu_psy,
+    texte_stab_psy,
+    texte_dfa,
+    "</ul>",
+  
+    "<p>Si malgré toute l’attention portée à ce document vous constatiez des erreurs, merci de nous les signaler.</p>",
+    "<p>L’équipe statistique du <strong>DIMSP</strong> reste à votre disposition pour tout échange ou amélioration du rapport 😊</p>",
+  
+    "<p>Bien à vous,</p>",
+    "<p><em>AV<br>Pour l’équipe du DIM du GHT05</em></p>",
+  
+    "<p><strong>PS :</strong> tous nos rapports sont disponibles sur le <em>SharePoint du DIM du GHT</em>.</p>",
+    "</body></html>"
+      # signature_html
+  )
+}else if(etabb == "CHICAS"){
+  
+    file_active_pt = texte_file_active(file_active_pt)
+    nb_sejours = texte_evolution_cheb_chicas(nb_sejours, nb_seances)
+    text_chir_ambu = fct_chir_ambu(chiffre_chir_ambu, taux_chir_ambu)
+    text_dms=fct_dms_cheb(dms_chiffre_annee_en_cours,dms_chiffre_annee_prec)
+    texte_valo = fct_valo(valo_chiffre, valo_taux)
+    text_tms = fct_tmp(tms_chiffre_annee_en_cours, tms_chiffre_annee_prec,tms_taux)
+    texte_taux_urgences = fct_taux_urgences(taux_passage, diff_taux_passage)
+    nb_uhcd = texte_nb_uhcd(nb_uhcd)
+    text_naissance = fct_naissance(diff_naissance, diff_avb, diff_cesarienne)
+    text_cancer = fct_cancer(diff_cancer)
+    text_chimio = fct_chimio(diff_chimio)
+    text_prot = fct_pro(chiffre_prothese_en_cours, chiffre_prothese_annee_prec, diff_prothese)
+    # evo_file_act_HAD = new_data_10_1$`Différence (%)\n2025-2024`[1]
+    text_had = fct_HAD(evo_file_act_HAD)
+    text_had_2 = fct_had_2(evo_nb_sej_HAD, evo_nb_seq_HAD, evo_nb_j_HAD)
+    text_had_3 = fct_valo(chiffre_valo_had, taux_valo_had)
+    text_smr = fct_smr(file_active_smr)
+    texte_smr_2 = fct_smr_2(sej_smr, sem_smr, journee_smr_HC, journee_smr_HP)
+    texte_cssar = fct_csarr(taux_smr_rh2, csarr)
+
+
+    texte_corps <- paste0(
+    "<html><body>",
+    "<p>Bonjour,</p>",
+    "<p>Veuillez trouver ci-joint le <strong><span style='color: #338fcc;'>rapport de données statistiques</span></strong> pour la période de <strong>janvier à ",mois_nom," 20",sum_graph_new_2025$Année[1],"</strong> concernant le <strong>",etabb,"</strong>.</p>",
+    "<p>Il s’agit des <strong><span style='color: #338fcc;'>données PMSI séjours</span></strong> issues du logiciel <strong>PMSI Pilot</strong>.</p>",
+  
+    "<strong><span style='color: #338fcc;'>Côté MCO</span></strong>, par rapport à l’année précédente :",
+    "<ul>",
+    file_active_pt,
+    nb_sejours,
+    text_chir_ambu,
+    text_dms,
+    texte_valo,
+    text_tms,
+    texte_taux_urgences,
+    nb_uhcd,
+    text_naissance,
+    text_cancer,
+    text_chimio,
+    text_prot,
+    "</ul>",
+    
+    "<strong><span style='color: #338fcc;'>Côté HAD</span></strong> (Hospitalisation à Domicile), par rapport à l’année précédente :",
+    "<ul>",
+    text_had,
+    text_had_2,
+    text_had_3,
+    "</ul>",
+  
+    "<strong><span style='color: #338fcc;'>Côté SMR</span></strong> (Soins Médicaux et de Réadaptation), par rapport à l’année précédente :",
+    "<ul>",
+    text_smr,
+    texte_smr_2,
+    texte_cssar,
+    "</ul>",
+  
+    "<p>Si malgré toute l’attention portée à ce document vous constatiez des erreurs, merci de nous les signaler.</p>",
+    "<p>L’équipe statistique du <strong>DIMSP</strong> reste à votre disposition pour tout échange ou amélioration du rapport 😊</p>",
+  
+    "<p>Bien à vous,</p>",
+    "<p><em>Emmanuelle<br>Pour l’équipe du DIM du GHT05</em></p>",
+  
+    "<p><strong>PS :</strong> tous nos rapports sont disponibles sur le <em>SharePoint du DIM du GHT</em>.</p>",
+    "</body></html>"
+      # signature_html
+  )
+}
+
+
+# Insertion dans le corps du mail
+Email[["HTMLBody"]] <- texte_corps
+
+
+
+# Affichage du mail dans Outlook
+Email$Display()
+
+# pwet
+```
+

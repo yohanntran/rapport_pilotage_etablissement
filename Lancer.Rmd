@@ -1,0 +1,51 @@
+---
+title: "LANCER"
+---
+
+```{r}
+library(rmarkdown)
+library(officedown)
+
+# Récupérer le nom d'utilisateur
+nom_utilisateur <- Sys.getenv("USERNAME")
+cat("Utilisateur actuel :", nom_utilisateur, "\n")
+
+# Configuration conditionnelle
+if (nom_utilisateur == "ytran") {
+  cat("Configuration spéciale pour ytran\n")
+  modele_path <- "C:/Users/Public/Documents/modele_RDD.docx"
+  
+  if (!file.exists(modele_path)) {
+  chemin_unc <- "//NETUSERS/Partages/Intra-Service/CHB/dim/Statistiques/APP RAPPORT PILOTAGE ETABLISSEMENT/PROG_RAPPORT_PILOTAGE_ETABLISSEMENT/modele_RDD.docx"
+  destination <- "C:/Users/Public/Documents/modele_RDD.docx"
+  
+  # Créer le dossier si nécessaire
+  dir.create("C:/Users/Public/Documents", showWarnings = FALSE, recursive = TRUE)
+  
+  # Copier le fichier
+  if (file.copy(chemin_unc, destination, overwrite = TRUE)) {
+    cat("✓ Modèle installé avec succès à :", destination, "\n")
+  } else {
+    stop("Échec de l'installation")
+  }
+  }
+  rmarkdown::render(
+  input = "Tableaux_pilotage.Rmd",
+  output_format = officedown::rdocx_document(reference_docx = "C:/Users/Public/Documents/modele_RDD.docx"),
+  output_file = "Tableaux_pilotage.docx"
+)
+} else {
+  cat("Configuration standard pour :", nom_utilisateur, "\n")
+  modele_path <- "modele_RDD.docx"
+  rmarkdown::render(
+  input = "Tableaux_pilotage.Rmd",
+  output_format = officedown::rdocx_document(reference_docx = "modele_RDD.docx"),
+  output_file = "Tableaux_pilotage.docx"
+)
+}
+```
+
+```{r}
+
+```
+
