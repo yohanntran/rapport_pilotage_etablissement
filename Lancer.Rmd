@@ -7,7 +7,7 @@ output: null
 library(rmarkdown)
 library(officedown)
 
-# etablissement = "CHEB"
+etablissement = "CHEB"
 # etablissement = "CHE"
 # etablissement = "CHICAS"
 
@@ -15,7 +15,7 @@ library(officedown)
 nom_utilisateur <- Sys.getenv("USERNAME")
 cat("Utilisateur actuel :", nom_utilisateur, "\n")
 
-date_moins1 <- seq(Sys.Date(), length = 2, by = "-1 month")[2]
+date_moins1 <- seq(Sys.Date(), length = 2, by = "-2 month")[2]
 annee <- format(date_moins1, "%Y")
 mois  <- format(date_moins1, "%m")   # toujours sur 2 chiffres
 

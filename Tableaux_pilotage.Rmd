@@ -2349,6 +2349,7 @@ fct_taux_urgences <- function(x,y) {
   y=as.numeric(y)
   # tendance <- if (x >= 0) "hausse" else "baisse"
   taux_passage <- format_perc(x)
+  taux_passage = gsub("^\\+", "", taux_passage)
   diff_taux_passage <- format_perc(y)
   return(paste0("<li>",taux_passage," des séjours avec <strong>un passage par les urgences</strong> (", diff_taux_passage, ")</li>"))
 }

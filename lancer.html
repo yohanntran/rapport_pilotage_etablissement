@@ -357,15 +357,15 @@ display: none;
 <pre><code>## Warning: le package &#39;rmarkdown&#39; a été compilé avec la version R 4.4.3</code></pre>
 <pre class="r"><code>library(officedown)
 
-# etablissement = &quot;CHEB&quot;
-etablissement = &quot;CHE&quot;
+etablissement = &quot;CHEB&quot;
+# etablissement = &quot;CHE&quot;
 # etablissement = &quot;CHICAS&quot;
 
 # Récupérer le nom d&#39;utilisateur
 nom_utilisateur &lt;- Sys.getenv(&quot;USERNAME&quot;)
 cat(&quot;Utilisateur actuel :&quot;, nom_utilisateur, &quot;\n&quot;)</code></pre>
 <pre><code>## Utilisateur actuel : ytran</code></pre>
-<pre class="r"><code>date_moins1 &lt;- seq(Sys.Date(), length = 2, by = &quot;-1 month&quot;)[2]
+<pre class="r"><code>date_moins1 &lt;- seq(Sys.Date(), length = 2, by = &quot;-2 month&quot;)[2]
 annee &lt;- format(date_moins1, &quot;%Y&quot;)
 mois  &lt;- format(date_moins1, &quot;%m&quot;)   # toujours sur 2 chiffres
 
@@ -497,14 +497,17 @@ if (nom_utilisateur == &quot;ytran&quot;) {
 <pre><code>## Warning in attr(x, &quot;knit_meta&quot;): &#39;xfun::attr()&#39; est obsolète.
 ## Utilisez plutôt ‘xfun::attr2()’.
 ## Voir help(&quot;Deprecated&quot;)</code></pre>
-<pre><code>##   |                                                           |.......................                            |  44%                     |                                                           |........................                           |  47% [pressure_2]        |                                                           |.........................                          |  49%                     |                                                           |..........................                         |  51% [unnamed-chunk-7]   |                                                           |...........................                        |  53%                     |                                                           |............................                       |  56% [unnamed-chunk-8]   |                                                           |..............................                     |  58%                     |                                                           |...............................                    |  60% [historique]        |                                                           |................................                   |  63%                     |                                                           |.................................                  |  65% [unnamed-chunk-9]   |                                                           |..................................                 |  67%                     |                                                           |....................................               |  70% [unnamed-chunk-10]</code></pre>
+<pre><code>##   |                                                           |.......................                            |  44%                     |                                                           |........................                           |  47% [pressure_2]        |                                                           |.........................                          |  49%                     |                                                           |..........................                         |  51% [unnamed-chunk-7]   |                                                           |...........................                        |  53%                     |                                                           |............................                       |  56% [unnamed-chunk-8]   |                                                           |..............................                     |  58%                     |                                                           |...............................                    |  60% [historique]        |                                                           |................................                   |  63%                     |                                                           |.................................                  |  65% [unnamed-chunk-9]</code></pre>
+<pre><code>## Warning: paragraph style for plots &quot;Figure&quot; has not been found in the
+## reference_docx document. Style &#39;Normal&#39; will be used instead.</code></pre>
+<pre><code>##   |                                                           |..................................                 |  67%                     |                                                           |....................................               |  70% [unnamed-chunk-10]</code></pre>
 <pre><code>## Warning: paragraph style for plots &quot;Figure&quot; has not been found in the
 ## reference_docx document. Style &#39;Normal&#39; will be used instead.</code></pre>
 <pre><code>##   |                                                           |.....................................              |  72%                     |                                                           |......................................             |  74% [page break]        |                                                           |.......................................            |  77%                     |                                                           |........................................           |  79% [patyate]           |                                                           |..........................................         |  81%                     |                                                           |...........................................        |  84% [unnamed-chunk-11]  |                                                           |............................................       |  86%                     |                                                           |.............................................      |  88% [unnamed-chunk-12]  |                                                           |..............................................     |  91%                     |                                                           |...............................................    |  93% [unnamed-chunk-13]  |                                                           |.................................................  |  95%                     |                                                           |.................................................. |  98% [unnamed-chunk-14]  |                                                           |...................................................| 100%                   </code></pre>
 <pre><code>## output file: Tableaux_pilotage.knit.md</code></pre>
-<pre><code>## &quot;C:/PROGRA~1/Pandoc/pandoc&quot; +RTS -K512m -RTS Tableaux_pilotage.knit.md --to docx --from markdown+autolink_bare_uris+tex_math_single_backslash --output pandoc3e4865567705.docx --lua-filter &quot;C:\Users\ytran\AppData\Local\Programs\R\R-4.4.0\library\rmarkdown\rmarkdown\lua\pagebreak.lua&quot; --highlight-style tango --reference-doc &quot;C:\Users\Public\Documents\modele_RDD.docx&quot;</code></pre>
+<pre><code>## &quot;C:/PROGRA~1/Pandoc/pandoc&quot; +RTS -K512m -RTS Tableaux_pilotage.knit.md --to docx --from markdown+autolink_bare_uris+tex_math_single_backslash --output pandoc1888310c7806.docx --lua-filter &quot;C:\Users\ytran\AppData\Local\Programs\R\R-4.4.0\library\rmarkdown\rmarkdown\lua\pagebreak.lua&quot; --highlight-style tango --reference-doc &quot;C:\Users\Public\Documents\modele_RDD.docx&quot;</code></pre>
 <pre><code>## 
-## Output created: ../SORTIE/2025M07 - CHE - Tableau pilotage.docx</code></pre>
+## Output created: ../SORTIE/2025M06 - CHEB - Tableau pilotage.docx</code></pre>
 
 
 
