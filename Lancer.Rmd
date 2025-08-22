@@ -7,13 +7,24 @@ output: null
 library(rmarkdown)
 library(officedown)
 
-etablissement = "CHEB"
+# etablissement = "CHEB"
 # etablissement = "CHE"
 # etablissement = "CHICAS"
 
 # Récupérer le nom d'utilisateur
 nom_utilisateur <- Sys.getenv("USERNAME")
 cat("Utilisateur actuel :", nom_utilisateur, "\n")
+
+date_moins1 <- seq(Sys.Date(), length = 2, by = "-1 month")[2]
+annee <- format(date_moins1, "%Y")
+mois  <- format(date_moins1, "%m")   # toujours sur 2 chiffres
+
+# Exemple : 2025M06 - CHEB - Tableau pilotage.docx
+nom_fichier <- paste0(
+  "../SORTIE/",
+  annee, "M", mois, " - ", etablissement, " - Tableau pilotage.docx"
+)
+
 
 # Configuration conditionnelle
 if (nom_utilisateur == "ytran") {
@@ -37,7 +48,7 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "C:/Users/Public/Documents/modele_RDD.docx"),
-  output_file = "../SORTIE/Tableaux_pilotage.docx",
+  output_file = nom_fichier,
   params = list(etabb = etablissement) 
 )
 } else {
@@ -46,7 +57,7 @@ if (nom_utilisateur == "ytran") {
   rmarkdown::render(
   input = "Tableaux_pilotage.Rmd",
   output_format = officedown::rdocx_document(reference_docx = "modele_RDD.docx"),
-  output_file = "../SORTIE/Tableaux_pilotage.docx",
+  output_file = nom_fichier,
   params = list(etabb = etablissement) 
 )
 }

@@ -18,7 +18,8 @@ always_allow_html:  yes
 ```
 
 ```{r pressure, echo=FALSE, fig.height=8.4, fig.width=6.5}
-# etabb = "CHEB"
+# etablissement = "CHE"
+# etabb = "CHE"
 etabb = params$etabb
 ################################################################################
 # Importation de la photo visible à la première page de couverture du document #
@@ -72,7 +73,7 @@ library("schoolmath") #is decimal (yes/n)
 library("ggpubr")
 
 #email
-library("RDCOMClient")
+# library("RDCOMClient")
 ```
 
 
@@ -2280,43 +2281,16 @@ cat(HTML("**MCO :** Médecine Chirurgie Obstétrique.
 liste_email = read.csv2("DestinataireMailPilotage.csv")
 
 # Create an Outlook object, a new email, and set the parameters.
-Outlook <- RDCOMClient::COMCreate("Outlook.Application")
-Email <- Outlook$CreateItem(0)
+# Outlook <- RDCOMClient::COMCreate("Outlook.Application")
+# Email <- Outlook$CreateItem(0)
 
 liste_email_1 = head(liste_email, 50)
 
-Email[["To"]] <- liste_email_1$Destinataire
+# Email[["To"]] <- liste_email_1$Destinataire
 
-mois_en_cours <- as.numeric(format(Sys.Date(), "%m"))
-mois_ajuste <- mois_en_cours - 2
 
-if(mois_en_cours >10){
-  if(mois_ajuste == 1){
-    mois_ajuste = 11
-  }
-  if(mois_ajuste == 2){
-    mois_ajuste = 12
-  }
-}
-if(length(mois_ajuste)==1){
-  mois_ajuste = paste0("0",mois_ajuste)
-}
-mois_fr <- c("janvier", "février", "mars", "avril", "mai", "juin",
-             "juillet", "août", "septembre", "octobre", "novembre", "décembre")
 
-mois_nom <- mois_fr[as.numeric(mois_ajuste)]
-objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
-
-Email[["subject"]] <- objet
-
-# Récupère le chemin vers le dossier contenant les signatures Outlook
-# signature_dir <- file.path(Sys.getenv("APPDATA"), "Microsoft", "Signatures")
-# 
-# # Liste les fichiers .htm (ce sont ceux utilisés dans les mails HTML)
-# signature_file <- list.files(signature_dir, pattern = "\\.htm$", full.names = TRUE)
-# 
-# signature_html <- readLines(signature_file[2], warn = FALSE, encoding = "UTF-8")
-# signature_html <- paste(signature_html, collapse = "\n")
+# Email[["subject"]] <- objet
 
 format_pourcentage <- function(x) {
   signe <- if (x > 0) "+" else if (x < 0) "−" else ""
@@ -2602,6 +2576,29 @@ fct_HAD = function(x){
 dms_chiffre=round(as.numeric(my_data_1_compl_1[[1]]$`2025`),1)
 # Corps du mail au format HTML (avec paragraphes et sauts de ligne)
 # taux_smr_rh2, csarr
+
+
+mois_en_cours <- as.numeric(format(Sys.Date(), "%m"))
+mois_ajuste <- mois_en_cours - 2
+
+if(mois_en_cours >10){
+  if(mois_ajuste == 1){
+    mois_ajuste = 11
+  }
+  if(mois_ajuste == 2){
+    mois_ajuste = 12
+  }
+}
+if(length(mois_ajuste)==1){
+  mois_ajuste = paste0("0",mois_ajuste)
+}
+mois_fr <- c("janvier", "février", "mars", "avril", "mai", "juin",
+             "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+mois_nom <- mois_fr[as.numeric(mois_ajuste)]
+objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
+
+
 # pwet
 if(etabb == "CHE"){
   
@@ -2786,13 +2783,53 @@ if(etabb == "CHE"){
 }
 
 
+
+generer_script <- function(liste_email_1, nom_script, objet, texte_corps) {
+  # Emails
+  emails <- if (is.data.frame(liste_email_1)) liste_email_1[[1]] else liste_email_1
+  to_string <- paste(emails, collapse = ";")
+  
+  # Chemin fichier HTML temporaire (UTF-8 avec BOM)
+  html_file <- sub("\\.ps1$", ".html", nom_script)
+  con <- file(html_file, open = "wb")
+  writeBin(as.raw(c(0xEF, 0xBB, 0xBF)), con)
+  writeBin(charToRaw(enc2utf8(texte_corps)), con)
+  close(con)
+  
+  # Script PowerShell : lit le HTML en UTF-8
+  lignes <- c(
+    "$outlook = New-Object -ComObject Outlook.Application",
+    "$mail = $outlook.CreateItem(0)",
+    "$mail.BodyFormat = 2",
+    "$mail.InternetCodepage = 65001",
+    paste0('$mail.To = "', to_string, '"'),
+    paste0('$mail.Subject = "', objet, '"'),
+    paste0('$mail.HTMLBody = [System.IO.File]::ReadAllText("', 
+           normalizePath(html_file, winslash="\\"),
+           '", [System.Text.Encoding]::UTF8)'),
+    "$mail.Display()"
+  )
+  
+  # Écrit le .ps1 en UTF-8 avec BOM
+  con <- file(nom_script, open = "wb")
+  writeBin(as.raw(c(0xEF, 0xBB, 0xBF)), con)
+  writeBin(charToRaw(enc2utf8(paste(lignes, collapse = "\r\n"))), con)
+  close(con)
+  
+  # Exécution
+  system2("powershell", c("-ExecutionPolicy", "Bypass", "-NoProfile", "-File",
+                          shQuote(normalizePath(nom_script, winslash="\\"))))
+}
+
+generer_script(liste_email_1, paste0("../SORTIE/",objet,".ps1"), objet, texte_corps)
+
 # Insertion dans le corps du mail
-Email[["HTMLBody"]] <- texte_corps
+# Email[["HTMLBody"]] <- texte_corps
 
 
 
 # Affichage du mail dans Outlook
-Email$Display()
+# Email$Display()
 
 ```
 
