@@ -2597,12 +2597,12 @@ mois_fr <- c("janvier", "février", "mars", "avril", "mai", "juin",
              "juillet", "août", "septembre", "octobre", "novembre", "décembre")
 
 mois_nom <- mois_fr[as.numeric(mois_ajuste)]
-objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
 
 
 # pwet
 if(etabb == "CHE"){
-  
+  objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
+
   file_active_pt = texte_file_active(file_active_pt)
   nb_sejours = texte_evolution(nb_sejours)
   nb_sej_court = texte_nb_sejours(nb_sej_court)
@@ -2652,7 +2652,8 @@ if(etabb == "CHE"){
       # signature_html
   )
 }else if(etabb == "CHEB"){
-  
+    objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO et PSY - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
+
     file_active_pt = texte_file_active(file_active_pt)
     nb_sejours = texte_evolution_cheb_chicas(nb_sejours, nb_seances)
     text_chir_ambu = fct_chir_ambu(chiffre_chir_ambu, taux_chir_ambu)
@@ -2713,7 +2714,8 @@ if(etabb == "CHE"){
       # signature_html
   )
 }else if(etabb == "CHICAS"){
-  
+    objet <-  paste0(etabb, " - Rapport statistiques PMSI séjours MCO, HAD & SMR - M", mois_ajuste,"20",sum_graph_new_2025$Année[1])
+
     file_active_pt = texte_file_active(file_active_pt)
     nb_sejours = texte_evolution_cheb_chicas(nb_sejours, nb_seances)
     text_chir_ambu = fct_chir_ambu(chiffre_chir_ambu, taux_chir_ambu)

@@ -7,8 +7,8 @@ output: null
 library(rmarkdown)
 library(officedown)
 
-etablissement = "CHEB"
-# etablissement = "CHE"
+# etablissement = "CHEB"
+etablissement = "CHE"
 # etablissement = "CHICAS"
 
 # Récupérer le nom d'utilisateur
