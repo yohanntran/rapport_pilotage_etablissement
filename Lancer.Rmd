@@ -8,8 +8,8 @@ library(rmarkdown)
 library(officedown)
 
 # etablissement = "CHEB"
-etablissement = "CHE"
-# etablissement = "CHICAS"
+# etablissement = "CHE"
+etablissement = "CHICAS"
 
 # Récupérer le nom d'utilisateur
 nom_utilisateur <- Sys.getenv("USERNAME")

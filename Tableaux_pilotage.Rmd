@@ -630,7 +630,7 @@ if(etablissement == "CHICAS"){
   journee_smr_HC = new_data_11[[1]]$`Différence (%)\n2025-2024`[4]
   journee_smr_HP = new_data_11[[1]]$`Différence (%)\n2025-2024`[5]
   
-  taux_smr_rh2 = round(new_data_11[[2]]$`2025`[3]/(new_data_11[[2]]$`2025`[1]+new_data_11[[2]]$`2025`[2]+new_data_11[[2]]$`2025`[3])*100,0)
+  taux_smr_rh2 = new_data_11[[2]]$`Différence (%)\n2025-2024`[3]
   csarr = round(new_data_11[[2]]$`2025`[5],0)
 }
 # pwet
@@ -642,7 +642,7 @@ if(etablissement == "CHE"){
   journee_smr_HC = new_data_11[[1]]$`Différence (%)\n2025-2024`[4]
   journee_smr_HP = new_data_11[[1]]$`Différence (%)\n2025-2024`[5]
   
-  taux_smr_rh2 = round(new_data_11[[2]]$`2025`[3]/(new_data_11[[2]]$`2025`[1]+new_data_11[[2]]$`2025`[2]+new_data_11[[2]]$`2025`[3])*100,0)
+  taux_smr_rh2 = new_data_11[[2]]$`Différence (%)\n2025-2024`[3]
   csarr = round(new_data_11[[2]]$`2025`[5],0)
 }
 
