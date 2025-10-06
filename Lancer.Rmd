@@ -7,9 +7,9 @@ output: null
 library(rmarkdown)
 library(officedown)
 
-# etablissement = "CHEB"
+etablissement = "CHEB"
 # etablissement = "CHE"
-etablissement = "CHICAS"
+# etablissement = "CHICAS"
 
 # Récupérer le nom d'utilisateur
 nom_utilisateur <- Sys.getenv("USERNAME")

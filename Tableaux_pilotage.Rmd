@@ -1551,7 +1551,7 @@ if(length(new_data_7)>0){
                     `2025`=sum(`2025`, na.rm = T)
                     )
         dat_list_9 = dat_list_9 %>% 
-          mutate(`Différence (%)\n2025-2024` = (`2025`-`2024`)/`2024`) %>% data.frame
+          mutate(`Différence (%)\n2025-2024` = (`2025`-`2024`)/`2024`*100) %>% data.frame
         colnames(dat_list_9)=c("Unité Médicale","2024","2025","Différence (%)\n2025-2024")
       }
       
